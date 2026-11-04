@@ -152,6 +152,14 @@ a { color: inherit; }
             <label for="depart">Car leaves at</label>
             <select id="depart"></select>
           </div>
+          <div class="full small" id="heatHint"></div>
+          <div class="full">
+            <label for="parking">Tomorrow the car is parked</label>
+            <select id="parking">
+              <option value="out">Outside in the sun</option>
+              <option value="cover">Undercover / garage</option>
+            </select>
+          </div>
           <div class="full">
             <label id="homeLbl">Tomorrow during the day, the car is…</label>
             <div class="seg" role="group" aria-labelledby="homeLbl">
@@ -246,6 +254,18 @@ a { color: inherit; }
             <label for="evEff">Charging efficiency</label>
             <div class="unit" data-unit="%"><input type="number" id="evEff" min="50" max="100" step="1" value="90" inputmode="decimal"></div>
           </div>
+          <div>
+            <label for="spikeProt">Spike protection</label>
+            <select id="spikeProt">
+              <option value="1">On</option>
+              <option value="0">Off</option>
+            </select>
+          </div>
+          <div>
+            <label for="spikeC">Spike price above</label>
+            <div class="unit" data-unit="c/kWh"><input type="number" id="spikeC" min="0" step="1" value="50" inputmode="decimal"></div>
+          </div>
+          <div class="full small" style="margin-top:-4px">With spike protection on, the car can't take battery energy the house will need to get through forecast price spikes.</div>
           <div class="full">
             <label for="curtail">When feed-in goes negative and the battery's full</label>
             <select id="curtail">
@@ -351,9 +371,11 @@ a { color: inherit; }
             <li><b>Solar</b> is the <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> forecast of sunlight on panels at your roof's angle, which already accounts for cloud. It's scaled by panel size and performance.</li>
             <li><b>House use</b> follows a typical Australian daily pattern (small morning bump, big evening peak) scaled to your daily total.</li>
             <li><b>Each hour:</b> solar powers the house and car first, then fills the battery, then exports. If feed-in is negative and curtailment is on, the extra solar is switched off instead. When solar runs short, the battery covers the house (and the car, if allowed) down to your reserve. The grid covers the rest.</li>
-            <li><b>Prices</b> are Amber's half-hourly forecast for buying and feed-in. Where Amber's forecast runs out (usually after tomorrow), it repeats the last known price for that time of day.</li>
+            <li><b>Prices</b> are Amber's half-hourly forecast for buying and feed-in. Where Amber's forecast runs out (usually after tomorrow), it uses the typical forecast price for that time of day. One-off spikes aren't copied forward.</li>
             <li><b>Battery on:</b> the car charges from plug-in time and the battery supplies it. <b>Battery off:</b> the car charges in the cheapest block before it leaves and the battery is kept for the house. <b>Solar tomorrow:</b> the car charges in the cheapest daytime block tomorrow.</li>
             <li>Looking three days ahead catches the trap where tomorrow is sunny but the next two days are grey. If the battery is already full tomorrow either way, those later days don't change the answer.</li>
+            <li><b>Spike protection:</b> an hour is protected if Amber flags it as a possible spike, its forecast is above your spike price, or Amber's high estimate is over double it. The car can't take the battery energy the house needs to get through those hours. That includes the hours in between, and it assumes solar comes in 30% under forecast, to be safe.</li>
+            <li><b>Charge limit:</b> heat plus a full pack is what wears out NMC batteries. If the car's parked outside, round tomorrow's top temperature to the nearest 10 and take it off 100. So 23°C gives 80% and 34°C gives 70%. It never goes below 50%.</li>
             <li>It's a forecast. Treat close calls as close calls.</li>
           </ul>
         </section>
@@ -392,9 +414,10 @@ const SHAPE = SHAPE_RAW.map((v) => v / SHAPE_SUM);
 const DAYS_AHEAD = 3;
 
 // ---------- settings ----------
-const FIELDS = ['soc','carNow','carTarget','plugIn','depart','pvKw','invKw','orient','tilt','batKwh','reserve','houseDaily','carKwh',
+const FIELDS = ['soc','carNow','carTarget','plugIn','depart','parking','spikeProt','spikeC','pvKw','invKw','orient','tilt','batKwh','reserve','houseDaily','carKwh',
                 'evKw','evEff','curtail','peak','offpeak','opStart','opEnd','fit','pr','rte','model'];
 const STORE = 'battery-or-grid-v2';
+const HEAT_MIN = 50; // never suggest a limit below this
 let loc = null, homeTomorrow = false;
 let amber = { token: '', siteId: '', sites: [] };
 let forecast = null;  // weather
@@ -464,7 +487,7 @@ function geoLoc() {
 async function fetchGTI(tilt, az, model) {
   const u = new URL('https://api.open-meteo.com/v1/forecast');
   u.search = new URLSearchParams({
-    latitude: loc.lat, longitude: loc.lon, hourly: 'cloud_cover,global_tilted_irradiance',
+    latitude: loc.lat, longitude: loc.lon, hourly: 'cloud_cover,global_tilted_irradiance,temperature_2m',
     tilt, azimuth: az, timezone: 'auto', forecast_days: DAYS_AHEAD + 2, past_days: 1, models: model,
   }).toString();
   const r = await fetch(u);
@@ -499,7 +522,7 @@ async function fetchForecast() {
       const startLocalMs = Date.parse(t + ':00Z') - 3600e3;
       const start = new Date(startLocalMs).toISOString();
       const gti = parts.reduce((s, p) => s + (p.hourly.global_tilted_irradiance[i] || 0), 0) / parts.length;
-      return { date: start.slice(0, 10), hod: parseInt(start.slice(11, 13), 10), epoch: startLocalMs - offset * 1000, gti, cloud: h.cloud_cover[i] ?? 0 };
+      return { date: start.slice(0, 10), hod: parseInt(start.slice(11, 13), 10), epoch: startLocalMs - offset * 1000, gti, cloud: h.cloud_cover[i] ?? 0, temp: h.temperature_2m ? h.temperature_2m[i] : null };
     }),
   };
   const note = model !== $('model').value ? ' (chosen model unavailable here, using best match)' : '';
@@ -545,17 +568,23 @@ async function amberPrices() {
   setStatus('amberStatus', 'Loading prices…');
   try {
     const iv = await amberGet(`sites/${encodeURIComponent(amber.siteId)}/prices/current?previous=0&next=96&resolution=30`);
-    const general = new Map(), feedIn = new Map();
+    const general = new Map(), feedIn = new Map(), high = new Map(), spike = new Map();
     let last = 0, nowGen = null, nowFeed = null;
     (iv || []).forEach((x) => {
       const t = Date.parse(x.startTime);
       if (!Number.isFinite(t) || typeof x.perKwh !== 'number') return;
-      if (x.channelType === 'general') { general.set(t, x.perKwh); last = Math.max(last, t); if (x.type === 'CurrentInterval') nowGen = x.perKwh; }
+      if (x.channelType === 'general') {
+        general.set(t, x.perKwh); last = Math.max(last, t);
+        const hi = x.advancedPrice && typeof x.advancedPrice.high === 'number' ? x.advancedPrice.high : (x.range && typeof x.range.max === 'number' ? x.range.max : x.perKwh);
+        high.set(t, Math.max(hi, x.perKwh));
+        spike.set(t, x.spikeStatus === 'potential' || x.spikeStatus === 'spike' || x.descriptor === 'spike');
+        if (x.type === 'CurrentInterval') nowGen = x.perKwh;
+      }
       // Amber reports feed-in as a price you pay, so negative = you're paid. Flip it to "what you earn".
       if (x.channelType === 'feedIn') { feedIn.set(t, -x.perKwh); if (x.type === 'CurrentInterval') nowFeed = -x.perKwh; }
     });
     if (!general.size) throw new Error('empty');
-    prices = { general, feedIn, last, fetchedAt: Date.now() };
+    prices = { general, feedIn, high, spike, last, fetchedAt: Date.now() };
     const until = new Date(last + 30 * 60e3);
     const untilTxt = until.toLocaleString('en-AU', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
     const nowTxt = nowGen != null ? ` Now: buy ${cents(nowGen)}${nowFeed != null ? `, feed-in ${cents(nowFeed)}` : ''}.` : '';
@@ -587,6 +616,7 @@ function readParams() {
     plugIn: parseInt($('plugIn').value, 10), depart: parseInt($('depart').value, 10), curtail: $('curtail').value === '1',
     peak: num('peak'), offpeak: num('offpeak'), fit: num('fit'),
     opStart: parseInt($('opStart').value, 10), opEnd: parseInt($('opEnd').value, 10), home: homeTomorrow,
+    spikeProt: $('spikeProt').value === '1', spikeC: num('spikeC'), parkedOut: $('parking').value === 'out',
   };
 }
 const inWindow = (h, a, b) => a === b ? false : (a < b ? h >= a && h < b : h >= a || h < b);
@@ -600,23 +630,50 @@ function nowLocal() {
 // Price (c/kWh) for each step: Amber where available, otherwise last known Amber price for that hour, otherwise manual tariff.
 function buildPrices(p, H) {
   const st = forecast.steps;
-  const imp = [], fin = [], real = [];
+  const imp = [], fin = [], real = [], hi = [], spk = [];
   const avg = (map, t0) => { let s = 0, n = 0; for (const t of [t0, t0 + 1800e3]) if (map.has(t)) { s += map.get(t); n++; } return n ? s / n : null; };
   for (let i = 0; i < st.length; i++) {
     let a = null, b = null;
     if (prices) { a = avg(prices.general, st[i].epoch); b = avg(prices.feedIn, st[i].epoch); }
     real[i] = a != null;
     imp[i] = a; fin[i] = b;
+    hi[i] = prices ? Math.max(prices.high.get(st[i].epoch) ?? -Infinity, prices.high.get(st[i].epoch + 1800e3) ?? -Infinity) : -Infinity;
+    spk[i] = !!(prices && (prices.spike.get(st[i].epoch) || prices.spike.get(st[i].epoch + 1800e3)));
   }
+  // Typical Amber price for each hour of day, from the hours we do have (spikes are one-offs,
+  // so the median keeps a single spike from being copied into every later day).
+  const byHod = Array.from({ length: 24 }, () => ({ imp: [], fin: [] }));
+  for (let i = 0; i < st.length; i++) if (real[i]) { byHod[st[i].hod].imp.push(imp[i]); if (fin[i] != null) byHod[st[i].hod].fin.push(fin[i]); }
   for (let i = 0; i < st.length; i++) {
     if (imp[i] == null) {
-      let j = i - 24; while (j >= 0 && !real[j]) j -= 24;
-      if (j >= 0) { imp[i] = imp[j]; fin[i] = fin[j]; }
+      const h = byHod[st[i].hod];
+      // With only one or two samples a median can't drop a spike, so take the lower one.
+      const typ = (a) => (a.length <= 2 ? Math.min(...a) : median(a));
+      if (h.imp.length) { imp[i] = typ(h.imp); fin[i] = h.fin.length ? typ(h.fin) : p.fit; }
       else { imp[i] = inWindow(st[i].hod, p.opStart, p.opEnd) ? p.offpeak : p.peak; fin[i] = p.fit; }
+      hi[i] = imp[i]; spk[i] = false;
     }
     if (fin[i] == null) fin[i] = p.fit;
+    if (!(hi[i] >= imp[i])) hi[i] = imp[i];
   }
-  return { imp, fin, real, anyReal: real.some(Boolean) };
+  // Spike-risk hours, and how much battery the house needs to ride through the ones ahead
+  // of each hour (until solar next covers the house).
+  const risky = st.map((s, i) => spk[i] || imp[i] >= p.spikeC || hi[i] >= 2 * p.spikeC);
+  const guard = new Array(st.length).fill(0);
+  let acc = 0;
+  for (let i = st.length - 1; i >= 0; i--) {
+    const house = p.houseDaily * SHAPE[st[i].hod];
+    // Working backwards: how much the battery must hold at the START of this hour so the house
+    // still has enough when the risky hours arrive. Every hour in between counts (the house keeps
+    // drawing on the battery), and spare solar tops it back up. Weak solar only helps a little.
+    guard[i] = acc; // need at the end of this hour
+    if (risky[i] || acc > 0) {
+      const net = house - 0.7 * pvAt(st[i].gti, p); // assume solar comes in 30% under forecast, to be safe
+      acc = Math.max(0, acc + (net > 0 ? net : net * p.rte));
+      acc = Math.min(acc, p.batKwh - p.reserveE);
+    }
+  }
+  return { imp, fin, real, hi, spk, risky, guard, anyReal: real.some(Boolean) };
 }
 
 function horizon() {
@@ -675,7 +732,8 @@ function simulate(p, H, P, car, battForCar) {
     }
     let avail = Math.min(bk, Math.max(0, e - p.reserveE));
     const dH = Math.min(avail, house - sH); avail -= dH;
-    const dC = battForCar ? Math.min(avail, want - sC) : 0;
+    const carAvail = p.spikeProt ? Math.min(avail, Math.max(0, e - dH - p.reserveE - P.guard[i])) : avail;
+    const dC = battForCar ? Math.min(carAvail, want - sC) : 0;
     e -= dH + dC;
     out.carFromBatt += dC;
     const imp = (house - sH - dH) + (want - sC - dC);
@@ -739,19 +797,55 @@ function analyse() {
 
   // daily summaries
   const days = H.days.map((d) => {
-    let pv = 0, cs = 0, cw = 0, hs = 0, pmax = -Infinity, fmin = Infinity, ev = [], real = true, any = false;
+    let pv = 0, cs = 0, cw = 0, hs = 0, tmax = -Infinity, fmin = Infinity, ev = [], real = true, any = false, spikes = [], maxImp = -Infinity;
     for (let i = H.i0; i <= H.i1; i++) {
       if (st[i].date !== d) continue;
       any = true;
       pv += pvAt(st[i].gti, p);
       if (st[i].gti > 50) { cs += st[i].cloud; cw++; hs += p.houseDaily * SHAPE[st[i].hod]; }
       if (st[i].hod >= 16 && st[i].hod < 21) ev.push(P.imp[i]);
+      if (st[i].temp != null && st[i].hod >= 8 && st[i].hod <= 18) tmax = Math.max(tmax, st[i].temp);
+      if (P.risky[i]) { spikes.push(st[i].hod); maxImp = Math.max(maxImp, P.hi[i]); }
       if (st[i].hod >= 9 && st[i].hod < 16) fmin = Math.min(fmin, P.fin[i]);
       if (!P.real[i]) real = false;
     }
-    return { date: d, any, pv, cloud: cw ? cs / cw : null, dayHouse: hs, eveningPrice: ev.length ? ev.reduce((a, b) => a + b, 0) / ev.length : null, minFeed: fmin, realPrices: real && P.anyReal };
+    return { date: d, any, pv, cloud: cw ? cs / cw : null, dayHouse: hs, eveningPrice: ev.length ? ev.reduce((a, b) => a + b, 0) / ev.length : null, minFeed: fmin, realPrices: real && P.anyReal,
+             tmax: tmax > -Infinity ? tmax : null, spikes, maxImp };
   });
   return { p, H, P, wall, opts, best, days, valueC };
+}
+
+// ---------- heat rule & spike windows ----------
+// Mate's rule of thumb for NMC packs left in the sun: round tomorrow's top temperature to the
+// nearest 10 and take it off 100. 23°C -> 20 -> 80%.
+const heatLimit = (t) => clamp(100 - Math.round(t / 10) * 10, HEAT_MIN, 100);
+
+function spikeWindows(A, from, to) {
+  const st = forecast.steps, P = A.P, out = [];
+  let cur = null;
+  for (let i = from; i <= to; i++) {
+    if (P.risky[i]) {
+      if (cur && cur.end === i - 1) { cur.end = i; cur.max = Math.max(cur.max, P.hi[i]); }
+      else { cur = { start: i, end: i, max: P.hi[i] }; out.push(cur); }
+    }
+  }
+  return out.map((w) => ({ ...w, guard: P.guard[w.start],
+    label: `${st[w.start].date === A.H.today ? 'tonight' : dayName(st[w.start].date)} ${hourLbl(st[w.start].hod)}–${hourLbl(st[w.end].hod + 1)}` }));
+}
+
+function renderHeat(A) {
+  const el = $('heatHint');
+  const d1 = A ? A.days[0] : null;
+  if (!d1 || d1.tmax == null) { el.innerHTML = ''; return null; }
+  const day = dayName(d1.date, true);
+  if (!A.p.parkedOut) { el.innerHTML = `Parked undercover ${day}, so the heat rule doesn't apply (top ${Math.round(d1.tmax)}°C).`; return null; }
+  const lim = heatLimit(d1.tmax);
+  const cur = clamp(num('carTarget'), 0, 100);
+  el.innerHTML = `Heat rule: ${day} tops out around <b>${Math.round(d1.tmax)}°C</b>, so charge to <b>${lim}%</b>. ` +
+    (cur === lim ? '✓' : `<button type="button" id="useHeat" style="padding:3px 8px;margin-left:4px">Use ${lim}%</button>`);
+  const b = $('useHeat');
+  if (b) b.onclick = () => { $('carTarget').value = lim; updateCarLbl(); save(); run(); };
+  return { lim, tmax: d1.tmax, day };
 }
 
 // ---------- render ----------
@@ -760,6 +854,7 @@ function run() {
   if (!forecast) return;
   $('emptyState').hidden = true; $('output').hidden = false;
   const A = analyse();
+  A.heat = renderHeat(A);
   renderVerdict(A); renderDays(A); renderTable(A); renderCharts(A);
 }
 
@@ -818,6 +913,28 @@ function renderVerdict(A) {
     lead = `You're home ${tom} with about ${fmt(d1.pv, 0)} kWh of solar${cloudTxt}. About ${fmt(so.r.carFromSolar * p.evEff, 0)} kWh can go straight from the panels into the car, and midday grid prices are low.`;
   }
 
+  // Spike risk between now and the end of tomorrow
+  const endTom = (() => { let k = H.i0; for (let i = H.i0; i <= H.i1; i++) if (forecast.steps[i].date <= H.days[0]) k = i; return k; })();
+  const wins = spikeWindows(A, H.i0, endTom);
+  if (wins.length) {
+    const w = wins.reduce((a, b) => (b.max > a.max ? b : a));
+    const list = wins.slice(0, 3).map((x) => x.label).join(', ');
+    if (p.spikeProt && best.key === 'batt') {
+      const car = block(forecast.steps.length, batt.start, H.i1, A.wall, p.evKw);
+      let held = 0; car.forEach((k, i) => { if (k > 0) held = Math.max(held, P.guard[i]); });
+      bullets.push(`<b>Price spike risk</b> ${list} (up to about ${cents(w.max)}). ` + (held > 0.5
+        ? `The battery holds back about ${fmt(held, 0)} kWh for the house to get through it, and the car doesn't get that energy.`
+        : `The car only gets battery energy the house won't need before solar refills it, so you're covered.`));
+    }
+    else if (p.spikeProt) bullets.push(`<b>Price spike risk</b> ${list} (up to about ${cents(w.max)}). Keeping the battery for the house covers it.`);
+    else bullets.push(`<b>Price spike risk</b> ${list} (up to about ${cents(w.max)}). Spike protection is off.`);
+  }
+  if (A.heat) {
+    const t = clamp(num('carTarget'), 0, 100);
+    action += ` Charge limit ${A.heat.lim}% (${Math.round(A.heat.tmax)}°C ${A.heat.day}).`;
+    if (t > A.heat.lim) bullets.push(`You've asked for ${t}%, which is above the heat-rule ${A.heat.lim}% for ${A.heat.day}.`);
+  }
+
   bullets.unshift(`Saves about <b>${money(Math.max(0, margin))}</b> compared with ${others.length === 1 ? 'the other option' : 'the next best option'}.`);
   if (best.key === 'batt') {
     const later = days.slice(1).find((d) => (batt.r.endDay[d.date] || 0) < (grid.r.endDay[d.date] || 0) - 0.08 * p.batKwh);
@@ -828,7 +945,7 @@ function renderVerdict(A) {
     if (avgC != null) bullets.push(`The cheapest block before you leave averages about ${cents(avgC)} a kWh.`);
   }
   if (!P.anyReal) bullets.push('Using estimated prices. Connect Amber for real ones.');
-  else if (days.slice(1).some((d) => !d.realPrices)) bullets.push("Amber's forecast doesn't reach the later days, so those use the last known price for each time of day.");
+  else if (days.slice(1).some((d) => !d.realPrices)) bullets.push("Amber's forecast doesn't reach the later days, so those use the typical price for each time of day.");
   if (p.batKw < p.evKw + 2 && best.key === 'batt') bullets.push(`The inverter (${fmt(p.batKw, 0)} kW) can't cover ${fmt(p.evKw, 0)} kW of car charging plus the house, so some will come from the grid.`);
 
   el.className = 'verdict ' + cls;
@@ -907,6 +1024,7 @@ function renderCharts(A) {
     type: 'line',
     data: { labels, datasets: [
       { label: 'Buy (c/kWh)', data: idx.map((i) => +P.imp[i].toFixed(1)), borderColor: cssVar('--series-import'), backgroundColor: cssVar('--series-import'), pointRadius: 0, borderWidth: 2, stepped: true, segment: seg },
+      ...(idx.some((i) => P.hi[i] > P.imp[i] + 0.5) ? [{ label: 'Buy, high estimate', data: idx.map((i) => +P.hi[i].toFixed(1)), borderColor: cssVar('--series-import'), backgroundColor: cssVar('--series-import'), borderWidth: 1, borderDash: [2, 3], pointRadius: 0, stepped: true }] : []),
       { label: 'Feed-in (c/kWh)', data: idx.map((i) => +P.fin[i].toFixed(1)), borderColor: cssVar('--series-feed'), backgroundColor: cssVar('--series-feed'), pointRadius: 0, borderWidth: 2, stepped: true, segment: seg },
     ] },
     options: { ...base, scales: { x: xAxis, y: { grid: { color: gridC }, title: { display: true, text: 'c/kWh' } } } },
