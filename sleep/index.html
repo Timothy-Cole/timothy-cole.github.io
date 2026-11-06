@@ -235,7 +235,7 @@ details p, details ul { margin: 8px 0; }
       <p><strong>Wake her by</strong> is the earliest of three times: the 1h 30m nap cap, 5 hours before your latest bedtime, or the point where more nap would push bedtime past your latest bedtime.</p>
       <p><strong>Adjusting to her.</strong> Once you've logged 5 nights, the planner compares when she actually fell asleep with the plan, using the middle value of her last two weeks. Regularly falling asleep later than planned usually means bedtime is a little early for her. Regularly falling asleep earlier usually means it's a little late. With the switch on, the plan shifts by 10–30 minutes to match. Nap days and no-nap days are counted separately once each has 3 nights.</p>
       <p><strong>Late nights.</strong> If lights out was 15 minutes or more after the plan, that night isn't used to move bedtime, because she fell asleep late for reasons that had nothing to do with her. It still counts towards her settle time: lights out to asleep, the middle value of up to 14 nights once 5 are logged.</p>
-      <p><strong>Catch-up routine.</strong> If you start late, books are cut down to 15 minutes, then the bath to 10 minutes, to get lights out as close to the plan as possible. The steps stay in the same order.</p>
+      <p><strong>Catch-up routine.</strong> If you start late, books are cut down to 15 minutes, then the bath to 10 minutes, to get lights out as close to the plan as possible. The steps stay in the same order. If she's also wired, each Wired tap still adds 15 minutes of books, so lights out and asleep move later.</p>
       <p>Bedtime is never set before 6:00pm. Times are rounded to the nearest 5 minutes.</p>
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. The 5-hour awake time is common advice from sleep consultants, not an official guideline. This is a guide only. Your child's own cues come first.</p>
     </details>
@@ -465,11 +465,14 @@ details p, details ul { margin: 8px 0; }
     const started = toMin(cur.startedAt);
     const catchUp = started !== null && started > bathStart;
     if (catchUp) {
-      let bathD = bath, booksD = books, short = bath + books - (lights - started);
+      // "Wired" always adds its time on top as extra books, so being late doesn't swallow it.
+      const wiredExtra = Math.max(0, nudge);
+      let bathD = bath, booksD = books, short = bath + books - (lights - wiredExtra - started);
       if (short > 0) {
         let c = Math.min(short, Math.max(0, booksD - 15)); booksD -= c; short -= c;
         c = Math.min(short, Math.max(0, bathD - 10)); bathD -= c;
       }
+      booksD += wiredExtra;
       const lo = started + bathD + booksD;
       shown = { bathStart: started, booksStart: started + bathD, lights: lo, asleep: lo + settle, bathD, booksD };
     }
@@ -478,7 +481,8 @@ details p, details ul { margin: 8px 0; }
     if (catchUp) {
       const lateMin = shown.lights - lights;
       $("catchState").textContent = "";
-      $("catchState").append(`Catch-up from ${fmt(started)}: ${shown.bathD} min bath, ${shown.booksD} min books. ` +
+      $("catchState").append(`Catch-up from ${fmt(started)}: ${shown.bathD} min bath, ${shown.booksD} min books` +
+        (nudge > 0 ? ` (including ${nudge} extra because she's wired). ` : ". ") +
         (lateMin > 0 ? `Lights out ${dur(lateMin)} later than planned. ` : "Lights out still on time. "));
       const u = document.createElement("button"); u.className = "linkbtn"; u.textContent = "Undo";
       u.onclick = () => { cur.startedAt = ""; calc(true); };
