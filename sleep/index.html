@@ -147,6 +147,10 @@ details p, details ul { margin: 8px 0; }
 .nm-main { width: 100%; margin-top: 22px; padding: 18px; font-size: 18px; background: #2a170c; }
 .nm-row { display: flex; justify-content: space-between; margin-top: 16px; }
 .nm-link { font: inherit; font-size: 14px; background: none; border: 0; color: #a87452; text-decoration: underline; cursor: pointer; padding: 6px 0; }
+.savebar { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.savebar .btn { flex-shrink: 0; white-space: nowrap; }
+.saved { font-size: 14px; color: var(--muted); }
+.saved.ok { color: var(--good); font-weight: 600; }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
@@ -215,6 +219,10 @@ details p, details ul { margin: 8px 0; }
       <p id="wakeByWhy"></p>
       <button type="button" class="btn primary" id="sheIsUp">She's up now</button>
     </div>
+    <div class="savebar">
+      <button type="button" class="btn primary" id="saveDay">Save today</button>
+      <span class="saved" id="savedDay" aria-live="polite"></span>
+    </div>
   </section>
 
   <section class="card hero" aria-live="polite">
@@ -271,6 +279,10 @@ details p, details ul { margin: 8px 0; }
         <button type="button" class="chip" id="offChip" aria-pressed="false">Sick or off night, don't count</button>
       </div>
       <div class="hint" id="tonightSummary"></div>
+      <div class="savebar">
+        <button type="button" class="btn primary" id="saveNight">Save tonight</button>
+        <span class="saved" id="savedNight" aria-live="polite"></span>
+      </div>
     </div>
   </section>
 
@@ -460,7 +472,7 @@ details p, details ul { margin: 8px 0; }
     const last = keys.length ? state.log[keys[keys.length - 1]] : null;
     return { wake: S.targetWake, mood: "", napMode: "yes", napStart: (last && last.napStart) || "12:30", napEnd: (last && last.napEnd) || "14:00", nudge: 0, actual: "", lightsOut: "", nightWakes: 0 };
   }
-  const commit = () => { state.log[day] = Object.assign({}, cur); save(); };
+  const commit = () => { cur.savedAt = nowHHMM(); state.log[day] = Object.assign({}, cur); save(); };
 
   // ---------- the model ----------
   function model(e) {
@@ -935,6 +947,7 @@ details p, details ul { margin: 8px 0; }
   function renderSide(p) {
     p = p || patterns();
     renderPatterns(p);
+    renderSaved();
     renderNightCard();
     renderNightBar();
     morningNightHint();
@@ -1051,7 +1064,7 @@ details p, details ul { margin: 8px 0; }
   function renderLog() {
     const list = $("log"); list.innerHTML = "";
     const keys = Object.keys(state.log).sort().reverse().slice(0, 14);
-    if (!keys.length) { list.appendChild(el("li", "empty", "Nothing logged yet. Today's plan is saved when you change a time or log when she fell asleep.")); return; }
+    if (!keys.length) { list.appendChild(el("li", "empty", "Nothing logged yet. Tap Save today, or change any time, and today's entry appears here.")); return; }
     keys.forEach((k) => {
       const e = state.log[k];
       const li = el("li");
@@ -1296,9 +1309,24 @@ details p, details ul { margin: 8px 0; }
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !$("nightMode").hidden) closeNight(); });
   $("snoreChip").addEventListener("click", () => { cur.snore = !cur.snore; calc(true); });
 
+  // ---------- save buttons ----------
+  function renderSaved(flash) {
+    const saved = !!state.log[day] && cur.savedAt;
+    const txt = saved ? `Saved at ${fmt(toMin(cur.savedAt))}. Changes save automatically too.` : "Not saved yet today.";
+    ["savedDay", "savedNight"].forEach((id) => { const e = $(id); e.textContent = (flash === id ? "✓ " : "") + txt; e.className = "saved" + (flash === id ? " ok" : ""); });
+  }
+  $("saveDay").addEventListener("click", () => {
+    if (!toMin(cur.wake) && toMin(cur.wake) !== 0) { $("savedDay").textContent = "Add her wake-up time first."; return; }
+    calc(true); renderSaved("savedDay");
+  });
+  $("saveNight").addEventListener("click", () => {
+    calc(true); renderSaved("savedNight");
+    if (!cur.lightsOut || !cur.actual) $("savedNight").textContent += " Add lights out and asleep times when you have them.";
+  });
+
   // ---------- backup ----------
   const HHMM = /^\d{2}:\d{2}$/, DATE = /^\d{4}-\d{2}-\d{2}$/;
-  const STR_FIELDS = ["wake", "napStart", "napEnd", "actual", "lightsOut", "startedAt"];
+  const STR_FIELDS = ["wake", "napStart", "napEnd", "actual", "lightsOut", "startedAt", "savedAt"];
   const NUM_FIELDS = ["nudge", "base", "planned", "plannedLights", "nightWakes", "nightAwake"];
   function cleanEntry(e) {
     if (!e || typeof e !== "object") return null;
