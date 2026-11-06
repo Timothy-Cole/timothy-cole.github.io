@@ -59,6 +59,9 @@ input[type="time"], input[type="number"] {
 .hero { text-align: center; padding: 22px 18px; background: var(--accent-soft); border-color: transparent; }
 .hero .label { font-size: 14px; color: var(--muted); font-weight: 500; }
 .hero .big { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; color: var(--sleep); line-height: 1.1; margin: 4px 0; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hero .big { font-size: 38px; }
+.hero .big.lo { color: var(--settle); }
 .hero .why { font-size: 14px; color: var(--text); margin: 8px 0 0; }
 .countdown { display: inline-block; margin-top: 12px; padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 15px; background: var(--surface); color: var(--text); }
 .countdown.soon { background: var(--warn-soft); color: var(--warn); }
@@ -101,7 +104,7 @@ details { font-size: 14px; color: var(--muted); }
 details summary { cursor: pointer; font-weight: 500; color: var(--text); }
 details p, details ul { margin: 8px 0; }
 [hidden] { display: none !important; }
-@media (max-width: 380px) { .hero .big { font-size: 40px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
+@media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
 </head>
 <body>
@@ -143,8 +146,10 @@ details p, details ul { margin: 8px 0; }
   </section>
 
   <section class="card hero" aria-live="polite">
-    <div class="label">Asleep by</div>
-    <div class="big" id="asleepBy">–</div>
+    <div class="pair">
+      <div><div class="label">Lights out</div><div class="big lo" id="lightsOut">–</div></div>
+      <div><div class="label">Asleep by</div><div class="big" id="asleepBy">–</div></div>
+    </div>
     <p class="why" id="why"></p>
     <p class="error" id="error" hidden></p>
     <div id="countdown" class="countdown" hidden></div>
@@ -264,7 +269,7 @@ details p, details ul { margin: 8px 0; }
     let s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
     if (!s || typeof s !== "object") s = {};
-    s.settings = Object.assign({ targetWake: "06:45", latestBed: "20:00", bath: 20, books: 30, settle: 15, adapt: false }, s.settings || {});
+    s.settings = Object.assign({ targetWake: "06:45", latestBed: "20:00", bath: 20, books: 30, settle: 30, adapt: false }, s.settings || {});
     s.log = s.log && typeof s.log === "object" ? s.log : {};
     if (!s.migrated) {
       const old = (k) => { try { return localStorage.getItem("sleep." + k); } catch (e) { return null; } };
@@ -272,6 +277,7 @@ details p, details ul { margin: 8px 0; }
       if (b) s.settings.bath = +b; if (bk) s.settings.books = +bk; if (st) s.settings.settle = +st;
       s.migrated = true;
     }
+    if (!s.settle30) { if (+s.settings.settle === 15) s.settings.settle = 30; s.settle30 = true; }
     return s;
   }
   const state = load();
@@ -388,7 +394,7 @@ details p, details ul { margin: 8px 0; }
   function showError(msg) {
     plan = null;
     $("error").textContent = msg; $("error").hidden = false;
-    $("asleepBy").textContent = "–"; $("why").textContent = "";
+    $("asleepBy").textContent = "–"; $("lightsOut").textContent = "–"; $("why").textContent = "";
     $("planCard").hidden = true; $("countdown").hidden = true; $("nudgeBtns").hidden = true; $("nudgeState").hidden = true;
     $("wakeBy").hidden = true;
   }
@@ -422,7 +428,8 @@ details p, details ul { margin: 8px 0; }
 
     $("error").hidden = true; $("planCard").hidden = false; $("nudgeBtns").hidden = false;
     $("asleepBy").textContent = fmt(asleep);
-    $("why").textContent = why;
+    $("lightsOut").textContent = fmt(lights);
+    $("why").textContent = why + ` Lights out ${settle} min before, so she has time to settle.`;
     $("nudgeState").hidden = !nudge;
     if (nudge) {
       $("nudgeState").textContent = "";
