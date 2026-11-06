@@ -134,6 +134,19 @@ input[type="time"], input[type="number"] {
 details { font-size: 14px; color: var(--muted); }
 details summary { cursor: pointer; font-weight: 500; color: var(--text); }
 details p, details ul { margin: 8px 0; }
+.btn.big { width: 100%; font-size: 18px; padding: 14px; }
+.stars { font-size: 22px; letter-spacing: 2px; color: var(--c-lights); margin: 0 0 4px; }
+.nightmode { position: fixed; inset: 0; z-index: 50; background: #000; color: #c98a5a; overflow-y: auto; }
+.nm-inner { max-width: 520px; margin: 0 auto; padding: 28px 16px 40px; }
+.nightmode h2 { font-size: 22px; margin: 0 0 12px; color: #d99a66; }
+.nm-script { background: #140c08; border: 1px solid #3a2416; border-radius: 12px; padding: 12px 14px; font-size: 16px; line-height: 1.5; margin: 0 0 8px; }
+.nm-label { font-size: 14px; margin: 16px 0 8px; color: #a87452; }
+.nm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.nm-btn { font: inherit; font-size: 15px; font-weight: 600; background: #140c08; color: #c98a5a; border: 1px solid #3a2416; border-radius: 12px; padding: 14px 8px; cursor: pointer; }
+.nm-btn[aria-pressed="true"] { background: #3a2416; border-color: #c98a5a; }
+.nm-main { width: 100%; margin-top: 22px; padding: 18px; font-size: 18px; background: #2a170c; }
+.nm-row { display: flex; justify-content: space-between; margin-top: 16px; }
+.nm-link { font: inherit; font-size: 14px; background: none; border: 0; color: #a87452; text-decoration: underline; cursor: pointer; padding: 6px 0; }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
@@ -141,7 +154,12 @@ details p, details ul { margin: 8px 0; }
 <body>
 <div class="wrap">
   <h1>Bedtime planner</h1>
-  <p class="sub">Enter today's wake-up and nap to get bath, books and bedtime.</p>
+  <p class="sub">Enter today's wake-up and nap to get dinner, bath, books and bedtime.</p>
+
+  <section class="card" id="nightBar" hidden>
+    <button type="button" class="btn primary big" id="awakeBtn">She's awake</button>
+    <div class="hint" id="nightBarHint"></div>
+  </section>
 
   <section class="card">
     <h2>Today</h2>
@@ -170,6 +188,8 @@ details p, details ul { margin: 8px 0; }
         <label for="nightAwake">Roughly how long awake in total (min)</label>
         <input type="number" id="nightAwake" min="0" max="300" step="5" placeholder="15">
       </div>
+      <div class="hint" id="nwLogged" hidden></div>
+      <div class="chips" style="margin-top:8px"><button type="button" class="chip" id="snoreChip" aria-pressed="false">Snored or gasped</button></div>
     </div>
     <div class="field">
       <span class="flabel" id="napLabel">Nap</span>
@@ -259,6 +279,12 @@ details p, details ul { margin: 8px 0; }
     <div id="patBody"></div>
   </section>
 
+  <section class="card pat" id="nightCard">
+    <h2>Night wakings</h2>
+    <div id="nightBody"></div>
+    <button type="button" class="btn" id="awakeBtn2">She's awake: log a waking</button>
+  </section>
+
   <section class="card">
     <h2>Last two weeks</h2>
     <div class="chartwrap" id="chartWrap">
@@ -336,12 +362,26 @@ details p, details ul { margin: 8px 0; }
       <p><strong>4-night trials.</strong> A suggested change runs as a 4-night trial, because it takes a few nights for her to adjust. During the trial nothing else changes. Afterwards the planner compares the trial nights with the nights before, and you decide whether to keep it or go back.</p>
       <p><strong>Bedtime fading.</strong> For long settling, lights out moves to when she's usually falling asleep anyway, so she drops off quickly. Then, every 4 nights, if she's settling in 20 minutes or less, it moves 15 minutes earlier until it's back at her original bedtime.</p>
       <p><strong>Ready to drop the nap?</strong> If she settles 15 minutes or more faster on no-nap days, the planner suggests trying quiet time instead. Long settling together with early waking or grumpy mornings usually means too much daytime sleep.</p>
+      <p><strong>Night wakings.</strong> Tap "She's awake" when she wakes. A dim screen records the time and asks why she woke and what you did, then "She's back asleep" records how long she was awake. After 5 nights, the planner looks for the cause. It checks whether she mostly wants you (especially if one of you stays or she comes into your bed), wakes at the same time each night, has night terrors, needs the toilet, is scared, or wakes more after late nights. It then suggests a 10-night plan with a short script for the night screen, so whoever gets up responds the same way. Nights 2–4 are often worse before they get better. A star is earned for each night in her own bed. Frequent night terrors or regular snoring are flagged as worth raising with your GP.</p>
       <p><strong>Always running late?</strong> If lights out is 15+ minutes late on 6 of the last 10 nights, the planner checks the mornings after. If she slept in and was mostly happy, it suggests a later day as a 4-night trial: a later wake-up and bedtime, no later than your latest wake-up for daycare days. If she still woke at her usual time, a later schedule would cost her sleep, so it suggests ways to make the evening fit instead, including a shorter routine (quiet time and bath no shorter than 15 minutes, books no shorter than 20).</p>
       <p><strong>The routine.</strong> It starts at dinner (screens off), then quiet time to digest, then bath, books and lights out. The planner works back from the asleep-by time to tell you when to start dinner.</p>
       <p><strong>Catch-up routine.</strong> If you're late, tap "Starting dinner now" or "Starting bath now". Quiet time is cut down to 15 minutes, then dinner to 30, books to 15 and the bath to 10, keeping the same order, to get lights out as close to the plan as possible. If she's also wired after a good nap, each Wired tap still adds 15 minutes of books.</p>
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. Awake times, settle times and the early-waking signs are common advice from sleep consultants, not official guidelines. This is a guide only. Your child's own cues come first.</p>
     </details>
   </section>
+</div>
+
+<div class="nightmode" id="nightMode" hidden role="dialog" aria-modal="true" aria-labelledby="nmTitle">
+  <div class="nm-inner">
+    <h2 id="nmTitle">Awake</h2>
+    <p class="nm-script" id="nmScript"></p>
+    <div class="nm-label">Why is she awake?</div>
+    <div class="nm-grid" id="nmCause"></div>
+    <div class="nm-label">What did you do?</div>
+    <div class="nm-grid" id="nmResp"></div>
+    <button type="button" class="nm-btn nm-main" id="nmBack">She's back asleep</button>
+    <div class="nm-row"><button type="button" class="nm-link" id="nmClose">Close (still awake)</button><button type="button" class="nm-link" id="nmDelete">Delete this waking</button></div>
+  </div>
 </div>
 
 <script>
@@ -533,8 +573,8 @@ details p, details ul { margin: 8px 0; }
       if (a !== null) { p.asleeps.push(a); p.planneds.push(e.planned); }
       let total = null;
       if (w !== null) {
-        p.mornings++; if (earlyWake(w)) p.earlyN++; if (+nx.nightWakes > 0) p.wakeN++;
-        if (a !== null) { const night = w + 1440 - a - (+nx.nightAwake || 0); p.nights.push(night); const nl = napLenOf(e); if (nl !== null) total = night + nl; }
+        p.mornings++; if (earlyWake(w)) p.earlyN++; if (nightInfo(k).count > 0) p.wakeN++;
+        if (a !== null) { const night = w + 1440 - a - nightInfo(k).awake; p.nights.push(night); const nl = napLenOf(e); if (nl !== null) total = night + nl; }
       }
       if (nx && nx.mood) { p.moods++; if (nx.mood === "grumpy") p.grumpyN++; if (nx.mood === "happy" && total !== null) p.happyTotals.push(total); }
     }
@@ -866,6 +906,7 @@ details p, details ul { margin: 8px 0; }
   }
 
   function tick() {
+    renderNightBar();
     const cd = $("countdown");
     if (!plan || activeDay() !== day) { cd.hidden = true; $("lateWrap").hidden = true; return; }
     const n = nowEve();
@@ -894,6 +935,9 @@ details p, details ul { margin: 8px 0; }
   function renderSide(p) {
     p = p || patterns();
     renderPatterns(p);
+    renderNightCard();
+    renderNightBar();
+    morningNightHint();
     renderChart();
     renderLog();
   }
@@ -996,7 +1040,8 @@ details p, details ul { margin: 8px 0; }
     if (q.pl !== null) line(`Planned asleep ${fmt(q.pl)}`, "m");
     const nx = morningAfter(q.k), w = nx ? toMin(nx.wake) : null;
     if (w !== null) line(`Next morning: woke ${fmt(w)}${earlyWake(w) ? " (early)" : ""}${nx.mood ? ", " + nx.mood : ""}`, "m");
-    if (nx && +nx.nightWakes > 0) line(`Woke ${nx.nightWakes}× in the night${nx.nightAwake ? ` (${dur(+nx.nightAwake)})` : ""}`, "m");
+    const ni = nightInfo(q.k);
+    if (ni.count) line(`Woke ${ni.count}× in the night${ni.awake ? ` (${dur(ni.awake)})` : ""}`, "m");
     tip.hidden = false;
     const wrap = $("chartWrap").clientWidth, tw = tip.offsetWidth;
     tip.style.left = Math.max(0, Math.min(wrap - tw, frac * wrap - tw / 2)) + "px";
@@ -1020,7 +1065,8 @@ details p, details ul { margin: 8px 0; }
       else if (e.napStart && e.napEnd && e.napMode === "yes") parts.push(`Nap ${fmt(toMin(e.napStart))}–${fmt(toMin(e.napEnd))}`);
       if (typeof e.planned === "number") parts.push("Planned " + fmt(e.planned));
       const nx = morningAfter(k), a = eveMin(e.actual), w = nx ? toMin(nx.wake) : null;
-      if (a !== null && w !== null) parts.push("Night " + dur(w + 1440 - a - (+nx.nightAwake || 0)));
+      const ni = nightInfo(k);
+      if (a !== null && w !== null) parts.push("Night " + dur(w + 1440 - a - ni.awake));
       const act = el("div", "act");
       [["lightsOut", "Lights out"], ["actual", "Asleep"]].forEach(([field, name]) => {
         const inp = document.createElement("input"); inp.type = "time"; inp.value = e[field] || ""; inp.setAttribute("aria-label", name + ", " + dayLabel(k));
@@ -1038,13 +1084,217 @@ details p, details ul { margin: 8px 0; }
       else if (dr !== null) pills.append(el("span", "pill", signed(dr) + " vs plan"));
       if (st !== null) pills.append(el("span", "pill", `Settled in ${dur(st)}`));
       if (e.stall) pills.append(el("span", "pill", "Stalling"));
-      if (nx && +nx.nightWakes > 0) pills.append(el("span", "pill", `Woke ${nx.nightWakes}× in the night${nx.nightAwake ? ` (${dur(+nx.nightAwake)})` : ""}`));
+      if (ni.count) pills.append(el("span", "pill", `Woke ${ni.count}× in the night${ni.awake ? ` (${dur(ni.awake)})` : ""}`));
+      if (ni.ws.length) li.dataset.wakes = "1";
       if (w !== null && earlyWake(w)) pills.append(el("span", "pill late", `Woke before 6am (${fmt(w)})`));
       li.append(top, el("div", "meta", parts.join(" · ")), act);
+      if (ni.ws.length) li.append(el("div", "meta", "Night: " + ni.ws.map((x) => `${fmt(toMin(x.t))}${x.cause ? " " + labelOf(CAUSES, x.cause).toLowerCase() : ""}${x.resp ? ", " + labelOf(RESPS, x.resp).toLowerCase() : ""}${wakeLen(x) ? ` (${dur(wakeLen(x))})` : ""}`).join("; ")));
       if (pills.childNodes.length) li.append(pills);
       list.appendChild(li);
     });
   }
+
+  // ---------- night wakings ----------
+  const CAUSES = [["scared", "Scared or nightmare"], ["toilet", "Toilet or drink"], ["company", "Wanted us"], ["unwell", "Unwell"], ["terror", "Night terror"], ["unsure", "Not sure"]];
+  const RESPS = [["quick", "Quick settle, left"], ["stayed", "Stayed till asleep"], ["ourbed", "Came to our bed"], ["toilet", "Toilet or drink"]];
+  const PLAN_NIGHTS = 10;
+  const PLAN_TITLE = { settle: "Settling on her own", terror: "Night terrors", habit: "Same-time wakings", toilet: "Toilet and drinks", scared: "Nightmares and fears", general: "Night-time basics" };
+  const SCRIPTS = {
+    settle: "Walk her back to bed calmly. Say your line: \"It's sleep time. I love you. Goodnight.\" Then leave. Keep it short and boring: no chatting, no lights, no lying down.",
+    terror: "Don't wake her or talk to her. Stay close, keep her safe, and stay calm and quiet. It passes in a few minutes, and she won't remember it.",
+    habit: "Keep it short and boring: check she's OK, say your goodnight line, and leave. Same response every time.",
+    toilet: "Toilet in dim light with no chatting, then straight back to bed with your goodnight line.",
+    scared: "Comfort her in her own room with the light dim. Tell her she's safe and you're close by, give her her comfort toy, then leave.",
+    general: "Keep the light dim and your voice quiet. Check she's OK, a quick cuddle, your goodnight line, then leave."
+  };
+  if (!Array.isArray(state.wakes)) state.wakes = [];
+  // A night runs from the evening until midday, so a 5am waking belongs to the night before.
+  const nightKeyNow = () => { const d = new Date(); if (d.getHours() < 12) d.setDate(d.getDate() - 1); return dkey(d); };
+  const wakesFor = (k) => state.wakes.filter((w) => w.night === k).sort((a, b) => eveMin(a.t) - eveMin(b.t));
+  const wakeLen = (w) => { const a = eveMin(w.t), b = eveMin(w.back); return a !== null && b !== null && b >= a ? b - a : 0; };
+  // Wakings logged with "She's awake" plus any added with the morning counter.
+  function nightInfo(k) {
+    const ws = wakesFor(k), nx = morningAfter(k);
+    const mN = nx ? +nx.nightWakes || 0 : 0, mA = nx ? +nx.nightAwake || 0 : 0;
+    return { count: ws.length + mN, awake: ws.reduce((t, w) => t + wakeLen(w), 0) + mA, ws, known: ws.length > 0 || !!(nx && toMin(nx.wake) !== null) };
+  }
+  const nightKeys = (from, to) => { const out = []; for (let k = from; k <= to; k = nextKey(k)) out.push(k); return out; };
+  const labelOf = (list, v) => { const f = list.find(([x]) => x === v); return f ? f[1] : ""; };
+  if (state.openWake) { const o = state.wakes.find((w) => w.id === state.openWake); if (!o || o.night !== nightKeyNow()) state.openWake = null; }
+
+  function analyse(keys) {
+    const A = { nights: 0, wakeNights: 0, total: 0, detailed: [], cause: {}, resp: {}, lateWake: [0, 0], ontimeWake: [0, 0], snore: 0 };
+    keys.forEach((k) => {
+      const ni = nightInfo(k); if (!ni.known) return;
+      A.nights++; if (ni.count) A.wakeNights++; A.total += ni.count;
+      ni.ws.forEach((w) => { A.detailed.push(w); if (w.cause) A.cause[w.cause] = (A.cause[w.cause] || 0) + 1; if (w.resp) A.resp[w.resp] = (A.resp[w.resp] || 0) + 1; });
+      const e = state.log[k];
+      if (e && !e.off && lateBy(e) !== null) { const slot = isLate(e) ? A.lateWake : A.ontimeWake; slot[0]++; if (ni.count) slot[1]++; }
+      const nx = morningAfter(k); if (nx && nx.snore) A.snore++;
+    });
+    A.avg = A.nights ? A.total / A.nights : 0;
+    const times = A.detailed.map((w) => eveMin(w.t)).filter((v) => v !== null);
+    if (times.length >= 4) { const m = median(times); if (times.filter((v) => Math.abs(v - m) <= 30).length / times.length >= 0.6) A.sameTime = round5(m); }
+    return A;
+  }
+
+  function nightSuggest(A) {
+    if (A.nights < 5) return null;
+    if (A.wakeNights / A.nights < 0.3) return { text: `She woke on ${A.wakeNights} of ${A.nights} nights. Occasional wakings are normal at 3, so there's nothing to fix.` };
+    const n = A.detailed.length, c = (k) => A.cause[k] || 0, r = (k) => A.resp[k] || 0;
+    if (n < 3) return { text: `She's waking on ${A.wakeNights} of ${A.nights} nights. Tap "She's awake" when it happens to log why she woke and what you did, so the planner can suggest a plan.` };
+    if (c("unwell") / n >= 0.4) return { text: "Most wakings were while she was unwell. Comfort her as much as she needs, and start a plan once she's well again." };
+    if (c("terror") >= 2) {
+      const tt = A.detailed.filter((w) => w.cause === "terror").map((w) => eveMin(w.t));
+      const m = median(tt), same = tt.filter((v) => Math.abs(v - m) <= 30).length / tt.length >= 0.6;
+      return { kind: "terror", stir: same ? round5(m) - 20 : null, text: (same ? `They happen around ${fmt(round5(m))}. ` : "") + `She's had ${c("terror")} night terrors (screaming or upset but not really awake). They usually come 1–3 hours after falling asleep and are linked to overtiredness. She won't remember them.` };
+    }
+    const assoc = (r("stayed") + r("ourbed")) / n;
+    if (c("company") / n >= 0.4 || assoc >= 0.5) return { kind: "settle", text: "She mostly wakes wanting you" + (assoc >= 0.5 ? ", and most nights one of you stays with her or she comes into your bed" : "") + ". That's the most common cause at 3: she needs at 2am whatever helped her fall asleep at bedtime. The fix is teaching her to fall asleep without you, at bedtime first." };
+    if (A.sameTime !== undefined) return { kind: "habit", text: `Her wakings cluster around ${fmt(A.sameTime)}. Same-time wakings are often a habit her body has learned, and a short run of "scheduled waking" can reset it.` };
+    if (c("toilet") / n >= 0.4) return { kind: "toilet", text: "Most wakings are for the toilet or a drink. That's mostly fixed in the evening routine." };
+    if (c("scared") / n >= 0.4) return { kind: "scared", text: "Most wakings are fears or nightmares, which are very common at 3 as her imagination grows. The fixes are mostly in the daytime." };
+    return { kind: "general", text: "No single cause stands out yet. Start with the basics that help most children:" };
+  }
+
+  function planSteps(kind, stir) {
+    const lightsT = plan ? plan.origLights : null;
+    const stirLine = (days) => stir != null
+      ? `Scheduled waking: at about ${fmt(stir)}, gently stir her (until she moves or mumbles), then let her drift back. Every night${days ? ` for ${days} nights` : ""}.`
+      : "If they happen at a similar time, gently stir her 15–30 minutes before that time each night.";
+    switch (kind) {
+      case "settle": return [
+        "At bedtime, say goodnight and leave before she's asleep. If she calls out, check in briefly after 2 minutes, then 5, then 10. Falling asleep without you at bedtime is what lets her do it again at 2am.",
+        "At night, give the same short response every time (it's on the night screen). No lying down, and no coming into your bed.",
+        "A sticker in the morning when she stays in her own bed all night."];
+      case "terror": return [stirLine(7),
+        "During a terror, don't wake her or talk to her. Keep her safe and wait. It passes in a few minutes.",
+        "Overtiredness triggers terrors, so keep bedtime on time, or try it a little earlier."];
+      case "habit": return [stirLine(7) + " Then stop.",
+        "If she wakes anyway, give the same short, boring response each time.",
+        "A sticker in the morning when she stays in her own bed all night."];
+      case "toilet": return [
+        `Last drink by ${lightsT !== null ? fmt(lightsT - 60) : "an hour before lights out"}.`,
+        "Toilet as the last thing before books, and again right before lights out.",
+        "A dim night light on the way to the toilet, or a potty in her room.",
+        "A sticker for taking herself to the toilet and back to bed."];
+      case "scared": return [
+        "No scary shows, books or games, especially in the afternoon and evening.",
+        "Talk about the dream the next day, not in the middle of the night. A comfort toy or \"monster spray\" helps her feel in control.",
+        "A dim, warm night light. At night, comfort her in her room, then leave."];
+      default: return [
+        "Room cool (18–20°C), dark and quiet. White noise helps.",
+        "A comfort toy, and the same goodnight line every night.",
+        "The same short, calm response every time she wakes.",
+        "An okay-to-wake clock, and a sticker for staying in bed."];
+    }
+  }
+  const stepList = (steps) => { const ul = el("ul"); ul.style.cssText = "margin:0 0 10px;padding-left:18px;font-size:14px"; steps.forEach((t) => ul.appendChild(el("li", null, t))); return ul; };
+  // A star means she stayed in her own bed: no wakings, or only quick settles in her room.
+  const starNight = (k) => { const ni = nightInfo(k); return ni.known && (ni.count === 0 || (ni.ws.length === ni.count && ni.ws.every((w) => w.resp !== "stayed" && w.resp !== "ourbed"))); };
+
+  function renderNightCard() {
+    const body = $("nightBody"); body.innerHTML = "";
+    const para = (t, c) => body.appendChild(el("p", c || null, t));
+    const yesterday = shiftKey(day, -1);
+    const NP = state.nightPlan;
+    if (NP) { renderNightPlan(body, NP, yesterday); return; }
+    const A = analyse(nightKeys(shiftKey(day, -14), yesterday));
+    if (A.nights) para(`Last 2 weeks: woke on ${A.wakeNights} of ${A.nights} nights, ${A.avg.toFixed(1)} times a night on average.`, "muted");
+    if (A.detailed.length) para("Logged reasons: " + CAUSES.filter(([v]) => A.cause[v]).map(([v, l]) => `${l.toLowerCase()} (${A.cause[v]})`).join(", ") + ".", "muted");
+    const sg = nightSuggest(A);
+    if (!sg) para(`Log 5 nights to see her night pattern: a morning wake-up, or "She's awake" when she wakes. ${A.nights} of 5 so far.`, "muted");
+    else {
+      para(sg.text, "rec");
+      if (sg.kind) {
+        const stir = sg.stir !== undefined ? sg.stir : A.sameTime !== undefined ? A.sameTime - 20 : null;
+        body.appendChild(stepList(planSteps(sg.kind, stir)));
+        const b = el("button", "btn", `Start a ${PLAN_NIGHTS}-night plan`);
+        b.onclick = () => { state.nightPlan = { kind: sg.kind, start: firstTrialNight(), len: PLAN_NIGHTS, stir }; save(); calc(false); };
+        body.appendChild(b);
+      }
+    }
+    nightFlags(A, para);
+  }
+  function nightFlags(A, para) {
+    const [ln, lw] = A.lateWake, [on, ow] = A.ontimeWake;
+    if (ln >= 2 && on >= 2 && lw / ln - ow / on >= 0.3) para(`She wakes more after late nights (${lw} of ${ln}, against ${ow} of ${on} on time). Overtiredness causes night wakings, so getting bedtime on time is part of the fix.`, "muted");
+    if ((A.cause.terror || 0) >= 3) para("Frequent night terrors are worth mentioning to your GP.", "muted");
+    if (A.snore >= 3) para(`Snoring or gasping on ${A.snore} mornings. Regular snoring is worth checking with your GP, as it can be a sign of enlarged tonsils or adenoids.`, "muted");
+  }
+  function renderNightPlan(body, NP, yesterday) {
+    const box = el("div", "trial"); body.appendChild(box);
+    const para = (t, c) => box.appendChild(el("p", c || null, t));
+    const acts = el("div", "acts");
+    const btn = (t, fn, primary) => { const b = el("button", "btn" + (primary ? " primary" : ""), t); b.onclick = fn; acts.appendChild(b); };
+    const due = shiftKey(NP.start, NP.len);
+    const n = Math.round((parseKey(day) - parseKey(NP.start)) / 86400000) + 1;
+    const lastNight = due <= day ? shiftKey(due, -1) : yesterday;
+    const before = analyse(nightKeys(shiftKey(NP.start, -14), shiftKey(NP.start, -1)));
+    const during = NP.start <= lastNight ? analyse(nightKeys(NP.start, lastNight)) : analyse([]);
+    const stars = NP.start <= lastNight ? nightKeys(NP.start, lastNight).filter(starNight).length : 0;
+    para(`Night plan: ${PLAN_TITLE[NP.kind]}. ` + (day >= due ? `${NP.len} nights done.` : n < 1 ? "Starts tonight." : `Night ${n} of ${NP.len}.`));
+    box.appendChild(stepList(planSteps(NP.kind, NP.stir)));
+    if (n >= 1 && n <= 5 && day < due) para("Nights 2–4 are often worse before they get better. That's normal, and usually means it's working. Stick with it.", "muted");
+    if (during.nights) para(`Wakings a night: ${before.nights ? before.avg.toFixed(1) + " before → " : ""}${during.avg.toFixed(1)} during the plan (${during.nights} ${during.nights === 1 ? "night" : "nights"}).`);
+    if (stars) { const s = el("p", "stars"); s.textContent = "★".repeat(Math.min(stars, 14)); s.setAttribute("aria-label", `${stars} stars`); box.appendChild(s); para(`${stars} ${stars === 1 ? "night" : "nights"} in her own bed. Let her stick a star on her chart each morning.`, "muted"); }
+    if (day >= due) {
+      const b = before.avg, d = during.avg;
+      para(!during.nights ? "Not enough logged during the plan to tell." : d === 0 ? "No wakings during the plan. Well done!" : b && d <= b * 0.5 ? "Big improvement. Keep the same habits going." : b && d < b ? "Improving. Keep going with the same response, as these changes can take 2–3 weeks." : "No change yet. Try another 5 nights, or a different plan.");
+      btn("Finish", () => { state.nightPlan = null; save(); calc(false); }, true);
+      btn("5 more nights", () => { NP.len += 5; save(); calc(false); });
+    } else btn("Stop plan", () => { state.nightPlan = null; save(); calc(false); });
+    box.appendChild(acts);
+  }
+
+  // ---------- "She's awake" night screen ----------
+  let openId = null;
+  function openNight() {
+    let w = state.openWake ? state.wakes.find((x) => x.id === state.openWake) : null;
+    if (!w) { w = { id: Date.now().toString(36), night: nightKeyNow(), t: nowHHMM(), cause: "", resp: "", back: "" }; state.wakes.push(w); }
+    openId = w.id; state.openWake = w.id; save();
+    renderNightScreen();
+    $("nightMode").hidden = false; document.body.style.overflow = "hidden";
+    $("nmBack").focus();
+  }
+  function closeNight() { $("nightMode").hidden = true; document.body.style.overflow = ""; openId = null; calc(false); }
+  function renderNightScreen() {
+    const w = state.wakes.find((x) => x.id === openId); if (!w) return;
+    $("nmTitle").textContent = `Awake at ${fmt(toMin(w.t))}`;
+    $("nmScript").textContent = SCRIPTS[state.nightPlan ? state.nightPlan.kind : "general"] || SCRIPTS.general;
+    const grid = (id, list, field) => {
+      const g = $(id); g.innerHTML = "";
+      list.forEach(([v, label]) => {
+        const b = el("button", "nm-btn", label); b.type = "button"; b.setAttribute("aria-pressed", String(w[field] === v));
+        b.onclick = () => { w[field] = w[field] === v ? "" : v; save(); renderNightScreen(); };
+        g.appendChild(b);
+      });
+    };
+    grid("nmCause", CAUSES, "cause"); grid("nmResp", RESPS, "resp");
+  }
+  function renderNightBar() {
+    const h = new Date().getHours();
+    const open = state.openWake ? state.wakes.find((w) => w.id === state.openWake) : null;
+    $("nightBar").hidden = !(h >= 18 || h < 8 || open);
+    $("awakeBtn").textContent = open ? `Awake since ${fmt(toMin(open.t))}: open` : "She's awake";
+    const NP = state.nightPlan, tonight = wakesFor(nightKeyNow());
+    $("nightBarHint").textContent = NP && NP.stir != null && NP.start <= nightKeyNow() ? `Night plan: stir her at about ${fmt(NP.stir)}.`
+      : tonight.length ? `Logged tonight: ${tonight.map((w) => fmt(toMin(w.t))).join(", ")}.`
+      : "Tap when she wakes in the night. It records the time for you.";
+  }
+  function morningNightHint() {
+    const ws = wakesFor(shiftKey(day, -1)), hint = $("nwLogged");
+    hint.hidden = !ws.length;
+    if (ws.length) hint.textContent = `Logged last night: ${ws.map((w) => `${fmt(toMin(w.t))}${w.cause ? " " + labelOf(CAUSES, w.cause).toLowerCase() : ""}${wakeLen(w) ? ` (${dur(wakeLen(w))})` : ""}`).join(", ")}. Only use the counter for wakings you didn't log.`;
+    $("snoreChip").setAttribute("aria-pressed", String(!!cur.snore));
+  }
+  $("awakeBtn").addEventListener("click", openNight);
+  $("awakeBtn2").addEventListener("click", openNight);
+  $("nmBack").addEventListener("click", () => { const w = state.wakes.find((x) => x.id === openId); if (w) w.back = nowHHMM(); state.openWake = null; save(); closeNight(); });
+  $("nmClose").addEventListener("click", closeNight);
+  $("nmDelete").addEventListener("click", () => { state.wakes = state.wakes.filter((x) => x.id !== openId); state.openWake = null; save(); closeNight(); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !$("nightMode").hidden) closeNight(); });
+  $("snoreChip").addEventListener("click", () => { cur.snore = !cur.snore; calc(true); });
 
   // ---------- backup ----------
   const HHMM = /^\d{2}:\d{2}$/, DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -1059,6 +1309,7 @@ details p, details ul { margin: 8px 0; }
     if (["happy", "ok", "grumpy", ""].includes(e.mood)) o.mood = e.mood;
     if (typeof e.stall === "boolean") o.stall = e.stall;
     if (typeof e.off === "boolean") o.off = e.off;
+    if (typeof e.snore === "boolean") o.snore = e.snore;
     if (typeof e.wiredOT === "string") o.wiredOT = e.wiredOT.slice(0, 120);
     return o;
   }
@@ -1069,7 +1320,7 @@ details p, details ul { margin: 8px 0; }
     $("backupMsg").textContent = `Last backup: ${days === 0 ? "today" : days === 1 ? "yesterday" : days + " days ago"}.` + (days >= 7 && n ? " Worth exporting again." : "");
   }
   async function exportBackup() {
-    const data = { app: "bedtime-planner", version: 1, exported: new Date().toISOString(), settings: S, log: state.log, trial: state.trial || null, lastChange: state.lastChange || null };
+    const data = { app: "bedtime-planner", version: 1, exported: new Date().toISOString(), settings: S, log: state.log, trial: state.trial || null, lastChange: state.lastChange || null, wakes: state.wakes, nightPlan: state.nightPlan || null };
     const name = `bedtime-planner-backup-${dkey(new Date())}.json`;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     let done = false;
@@ -1098,6 +1349,14 @@ details p, details ul { margin: 8px 0; }
       Object.keys(inc).forEach((f) => { if ((mine[f] === undefined || mine[f] === "") && inc[f] !== "") { mine[f] = inc[f]; changed = true; } });
       if (changed) filled++;
     });
+    let wakesAdded = 0;
+    if (Array.isArray(data.wakes)) data.wakes.forEach((w) => {
+      if (!w || typeof w.id !== "string" || w.id.length > 20 || !DATE.test(w.night || "") || !HHMM.test(w.t || "")) return;
+      if (state.wakes.some((x) => x.id === w.id)) return;
+      state.wakes.push({ id: w.id, night: w.night, t: w.t, back: HHMM.test(w.back || "") ? w.back : "",
+        cause: CAUSES.some(([v]) => v === w.cause) ? w.cause : "", resp: RESPS.some(([v]) => v === w.resp) ? w.resp : "" });
+      wakesAdded++;
+    });
     let settingsMsg = "";
     if (wasEmpty && data.settings && typeof data.settings === "object") {
       const d = data.settings;
@@ -1108,12 +1367,15 @@ details p, details ul { margin: 8px 0; }
       if (tr && typeof tr === "object" && DATE.test(tr.start || "") && HHMM.test(tr.from || "") && HHMM.test(tr.origFrom || "") && ["earlier", "fade", "later"].includes(tr.kind) && (tr.fromWake === undefined || HHMM.test(tr.fromWake))
         && ["delta", "fromSettle", "fromShift", "origSettle", "origShift"].every((f) => typeof tr[f] === "number" && Math.abs(tr[f]) <= 600)) state.trial = tr;
       if (typeof data.lastChange === "string" && DATE.test(data.lastChange)) state.lastChange = data.lastChange;
+      const np = data.nightPlan;
+      if (np && typeof np === "object" && PLAN_TITLE[np.kind] && DATE.test(np.start || "") && Number.isInteger(np.len) && np.len > 0 && np.len <= 60 && (np.stir === null || Number.isFinite(np.stir)))
+        state.nightPlan = { kind: np.kind, start: np.start, len: np.len, stir: np.stir };
       settingsMsg = " Settings were copied too.";
     }
     save();
     if (state.log[day]) cur = Object.assign({}, state.log[day]);
     syncInputs(); calc(false);
-    $("backupMsg").textContent = `Imported: ${added} new ${added === 1 ? "night" : "nights"}, ${filled} filled in.${settingsMsg}`;
+    $("backupMsg").textContent = `Imported: ${added} new ${added === 1 ? "night" : "nights"}, ${filled} filled in${wakesAdded ? `, ${wakesAdded} night ${wakesAdded === 1 ? "waking" : "wakings"}` : ""}.${settingsMsg}`;
   }
 
   // ---------- events ----------
