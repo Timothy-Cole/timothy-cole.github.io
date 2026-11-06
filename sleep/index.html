@@ -68,6 +68,8 @@ input[type="time"], input[type="number"] {
 .countdown.now { background: var(--good-soft); color: var(--good); }
 .nudge { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
 .nudge .btn { background: var(--surface); }
+.catchup { margin-top: 12px; }
+.catchup .btn { width: 100%; }
 .nudge-state { font-size: 13px; color: var(--muted); margin-top: 8px; }
 .linkbtn { font: inherit; font-size: 13px; background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
 .timeline { list-style: none; margin: 0; padding: 0; }
@@ -96,8 +98,10 @@ input[type="time"], input[type="number"] {
 .log .date { font-weight: 600; }
 .log .del { font: inherit; font-size: 13px; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 4px; }
 .log .meta { font-size: 13px; color: var(--muted); margin: 2px 0 8px; }
-.log .act { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 14px; }
+.log .act { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 6px 10px; align-items: center; font-size: 14px; }
+.log .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .log .act input { font-size: 15px; padding: 6px 8px; }
+.pill.late { background: var(--warn-soft); color: var(--warn); }
 .pill { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); white-space: nowrap; }
 .empty { color: var(--muted); font-size: 14px; margin: 0; }
 details { font-size: 14px; color: var(--muted); }
@@ -147,7 +151,7 @@ details p, details ul { margin: 8px 0; }
 
   <section class="card hero" aria-live="polite">
     <div class="pair">
-      <div><div class="label">Lights out</div><div class="big lo" id="lightsOut">–</div></div>
+      <div><div class="label">Lights out</div><div class="big lo" id="heroLights">–</div></div>
       <div><div class="label">Asleep by</div><div class="big" id="asleepBy">–</div></div>
     </div>
     <p class="why" id="why"></p>
@@ -158,6 +162,8 @@ details p, details ul { margin: 8px 0; }
       <button type="button" class="btn" id="wired">Wired: 15 min later</button>
     </div>
     <div class="nudge-state" id="nudgeState" hidden></div>
+    <div class="catchup" id="lateWrap" hidden><button type="button" class="btn primary" id="lateBtn">Running late? Start a catch-up routine now</button></div>
+    <div class="nudge-state" id="catchState" hidden></div>
   </section>
 
   <section class="card" id="planCard">
@@ -174,10 +180,18 @@ details p, details ul { margin: 8px 0; }
       <div class="stat"><b id="sTotal">–</b><span>total / 24h</span></div>
     </div>
     <ul class="notes" id="notes"></ul>
-    <div class="actual field">
-      <label for="actual">She actually fell asleep at</label>
-      <div class="tin"><input type="time" id="actual"><button type="button" class="btn" data-now="actual">Now</button></div>
-      <div class="hint">Logging this each night lets the planner learn her patterns.</div>
+    <div class="actual">
+      <div>
+        <div class="field">
+          <label for="lightsOut">Lights out at</label>
+          <div class="tin"><input type="time" id="lightsOut"><button type="button" class="btn" data-now="lightsOut">Now</button></div>
+        </div>
+        <div class="field">
+          <label for="actual">Fell asleep at</label>
+          <div class="tin"><input type="time" id="actual"><button type="button" class="btn" data-now="actual">Now</button></div>
+        </div>
+      </div>
+      <div class="hint" id="tonightSummary"></div>
     </div>
   </section>
 
@@ -220,6 +234,8 @@ details p, details ul { margin: 8px 0; }
       </ul>
       <p><strong>Wake her by</strong> is the earliest of three times: the 1h 30m nap cap, 5 hours before your latest bedtime, or the point where more nap would push bedtime past your latest bedtime.</p>
       <p><strong>Adjusting to her.</strong> Once you've logged 5 nights, the planner compares when she actually fell asleep with the plan, using the middle value of her last two weeks. Regularly falling asleep later than planned usually means bedtime is a little early for her. Regularly falling asleep earlier usually means it's a little late. With the switch on, the plan shifts by 10–30 minutes to match. Nap days and no-nap days are counted separately once each has 3 nights.</p>
+      <p><strong>Late nights.</strong> If lights out was 15 minutes or more after the plan, that night isn't used to move bedtime, because she fell asleep late for reasons that had nothing to do with her. It still counts towards her settle time: lights out to asleep, the middle value of up to 14 nights once 5 are logged.</p>
+      <p><strong>Catch-up routine.</strong> If you start late, books are cut down to 15 minutes, then the bath to 10 minutes, to get lights out as close to the plan as possible. The steps stay in the same order.</p>
       <p>Bedtime is never set before 6:00pm. Times are rounded to the nearest 5 minutes.</p>
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. The 5-hour awake time is common advice from sleep consultants, not an official guideline. This is a guide only. Your child's own cues come first.</p>
     </details>
@@ -237,6 +253,7 @@ details p, details ul { margin: 8px 0; }
   const LATE_NAP_END = 15 * 60 + 30;
   const MIN_NIGHTS = 5;            // logged nights before patterns kick in
   const KEY = "sleep.v2";
+  const LATE_LIGHTS = 15;          // lights out this late = night not used for bedtime learning
 
   const $ = (id) => document.getElementById(id);
 
@@ -351,21 +368,37 @@ details p, details ul { margin: 8px 0; }
   }
 
   // ---------- patterns ----------
+  const plannedLightsOf = (e) => typeof e.plannedLights === "number" ? e.plannedLights : (typeof e.planned === "number" ? e.planned - (+S.settle || 0) : null);
+  const lateBy = (e) => { const lo = eveMin(e.lightsOut), pl = plannedLightsOf(e); return lo === null || pl === null ? null : lo - pl; };
+  // How far she fell asleep from the plan, judged with today's settle setting so a settle-time change isn't counted twice.
+  const driftOf = (e) => {
+    const a = eveMin(e.actual); if (a === null || typeof e.base !== "number") return null;
+    let target = e.base + (e.nudge || 0);
+    if (typeof e.plannedLights === "number" && typeof e.planned === "number") target += (+S.settle || 0) - (e.planned - e.plannedLights);
+    return a - target;
+  };
+  const settleOf = (e) => { const lo = eveMin(e.lightsOut), a = eveMin(e.actual); if (lo === null || a === null) return null; const d = a - lo; return d >= 0 && d <= 180 ? d : null; };
   function patterns() {
     const keys = Object.keys(state.log).sort().reverse();
-    const rows = [], nights = [];
+    const rows = [], nights = [], settles = [];
+    let lateN = 0;
     for (const k of keys) {
       const e = state.log[k];
+      const st = settleOf(e);
+      if (st !== null && settles.length < 14) settles.push(st);
       const a = eveMin(e.actual);
       if (a === null || typeof e.base !== "number") continue;
-      if (rows.length < 14) rows.push({ napped: e.napMode !== "no", drift: a - (e.base + (e.nudge || 0)) });
+      const lb = lateBy(e);
+      if (lb !== null && lb >= LATE_LIGHTS) { if (rows.length < 14) lateN++; }
+      else if (rows.length < 14) rows.push({ napped: e.napMode !== "no", drift: driftOf(e) });
       const nx = state.log[nextKey(k)];
       if (nx && toMin(nx.wake) !== null && nights.length < 14) nights.push(toMin(nx.wake) + 1440 - a);
     }
     const nap = rows.filter((r) => r.napped).map((r) => r.drift);
     const noNap = rows.filter((r) => !r.napped).map((r) => r.drift);
     return {
-      n: rows.length,
+      n: rows.length, lateN,
+      settle: settles.length >= 5 ? median(settles) : null, settleN: settles.length,
       all: rows.length ? median(rows.map((r) => r.drift)) : 0,
       nap: nap.length >= 3 ? median(nap) : null,
       noNap: noNap.length >= 3 ? median(noNap) : null,
@@ -387,6 +420,7 @@ details p, details ul { margin: 8px 0; }
     $("napStart").value = cur.napStart || "";
     $("napEnd").value = cur.napEnd || "";
     $("actual").value = cur.actual || "";
+    $("lightsOut").value = cur.lightsOut || "";
     ["targetWake", "latestBed", "bath", "books", "settle"].forEach((id) => { $(id).value = S[id]; });
     $("adapt").checked = !!S.adapt;
   }
@@ -394,7 +428,7 @@ details p, details ul { margin: 8px 0; }
   function showError(msg) {
     plan = null;
     $("error").textContent = msg; $("error").hidden = false;
-    $("asleepBy").textContent = "–"; $("lightsOut").textContent = "–"; $("why").textContent = "";
+    $("asleepBy").textContent = "–"; $("heroLights").textContent = "–"; $("why").textContent = "";
     $("planCard").hidden = true; $("countdown").hidden = true; $("nudgeBtns").hidden = true; $("nudgeState").hidden = true;
     $("wakeBy").hidden = true;
   }
@@ -414,7 +448,6 @@ details p, details ul { margin: 8px 0; }
     const nudge = cur.nudge || 0;
     const asleep = r.base + offset + nudge;
     cur.base = r.base; cur.planned = asleep;
-    if (persist) commit();
 
     let why = r.why;
     if (offset) why += ` Moved ${dur(offset)} ${offset > 0 ? "later" : "earlier"} to match her recent nights.`;
@@ -424,11 +457,37 @@ details p, details ul { margin: 8px 0; }
 
     const settle = +S.settle || 0, books = +S.books || 0, bath = +S.bath || 0;
     const lights = asleep - settle, booksStart = lights - books, bathStart = booksStart - bath;
-    plan = { bathStart, booksStart, lights, asleep };
+    cur.plannedLights = lights;
+    if (persist) commit();
+
+    // Catch-up: started late, so trim books (to 15) then bath (to 10), keeping the order.
+    let shown = { bathStart, booksStart, lights, asleep, bathD: bath, booksD: books };
+    const started = toMin(cur.startedAt);
+    const catchUp = started !== null && started > bathStart;
+    if (catchUp) {
+      let bathD = bath, booksD = books, short = bath + books - (lights - started);
+      if (short > 0) {
+        let c = Math.min(short, Math.max(0, booksD - 15)); booksD -= c; short -= c;
+        c = Math.min(short, Math.max(0, bathD - 10)); bathD -= c;
+      }
+      const lo = started + bathD + booksD;
+      shown = { bathStart: started, booksStart: started + bathD, lights: lo, asleep: lo + settle, bathD, booksD };
+    }
+    plan = Object.assign({ origBath: bathStart, origLights: lights }, shown);
+    $("catchState").hidden = !catchUp;
+    if (catchUp) {
+      const lateMin = shown.lights - lights;
+      $("catchState").textContent = "";
+      $("catchState").append(`Catch-up from ${fmt(started)}: ${shown.bathD} min bath, ${shown.booksD} min books. ` +
+        (lateMin > 0 ? `Lights out ${dur(lateMin)} later than planned. ` : "Lights out still on time. "));
+      const u = document.createElement("button"); u.className = "linkbtn"; u.textContent = "Undo";
+      u.onclick = () => { cur.startedAt = ""; calc(true); };
+      $("catchState").append(u);
+    }
 
     $("error").hidden = true; $("planCard").hidden = false; $("nudgeBtns").hidden = false;
-    $("asleepBy").textContent = fmt(asleep);
-    $("lightsOut").textContent = fmt(lights);
+    $("asleepBy").textContent = fmt(shown.asleep);
+    $("heroLights").textContent = fmt(shown.lights);
     $("why").textContent = why + ` Lights out ${settle} min before, so she has time to settle.`;
     $("nudgeState").hidden = !nudge;
     if (nudge) {
@@ -439,10 +498,17 @@ details p, details ul { margin: 8px 0; }
       $("nudgeState").append(u);
     }
 
-    $("tBath").textContent = fmt(bathStart);   $("dBath").textContent = `${bath} min`;
-    $("tBooks").textContent = fmt(booksStart); $("dBooks").textContent = `${books} min`;
-    $("tLights").textContent = fmt(lights);    $("dSettle").textContent = `${settle} min to settle`;
-    $("tSleep").textContent = fmt(asleep);
+    $("tBath").textContent = fmt(shown.bathStart);   $("dBath").textContent = `${shown.bathD} min`;
+    $("tBooks").textContent = fmt(shown.booksStart); $("dBooks").textContent = `${shown.booksD} min`;
+    $("tLights").textContent = fmt(shown.lights);    $("dSettle").textContent = `${settle} min to settle`;
+    $("tSleep").textContent = fmt(shown.asleep);
+
+    // tonight's log summary
+    const tParts = [];
+    const lb = lateBy(cur), st = settleOf(cur);
+    if (lb !== null) tParts.push(lb >= LATE_LIGHTS ? `Lights out ${dur(lb)} late, so tonight won't be used to move bedtime.` : lb <= -5 ? `Lights out ${dur(lb)} early.` : "Lights out on time.");
+    if (st !== null) tParts.push(`Settled in ${dur(st)}.`);
+    $("tonightSummary").textContent = tParts.length ? tParts.join(" ") : "Logging both each night lets the planner learn her patterns.";
 
     const night = r.tW - asleep;
     $("sNight").textContent = dur(night);
@@ -460,9 +526,16 @@ details p, details ul { margin: 8px 0; }
 
   function tick() {
     const el = $("countdown");
-    if (!plan || activeDay() !== day) { el.hidden = true; return; }
+    if (!plan || activeDay() !== day) { el.hidden = true; $("lateWrap").hidden = true; return; }
     const n = nowEve();
+    $("lateWrap").hidden = !!(cur.startedAt || cur.lightsOut || cur.actual) || n <= plan.origBath + 5 || n >= plan.origLights + 120;
     let text = "", cls = "";
+    const lo = eveMin(cur.lightsOut);
+    if (lo !== null && !cur.actual) {
+      if (n < lo + 180) { el.textContent = `Settling since ${fmt(lo)}. Tap Now when she's asleep`; el.className = "countdown now"; el.hidden = false; }
+      else el.hidden = true;
+      return;
+    }
     if (n < plan.bathStart) {
       const left = plan.bathStart - n;
       if (left > 6 * 60) { el.hidden = true; return; }
@@ -480,15 +553,28 @@ details p, details ul { margin: 8px 0; }
     // patterns
     const body = $("patBody"); body.innerHTML = "";
     const para = (t, c) => { const e = document.createElement("p"); e.textContent = t; if (c) e.className = c; body.appendChild(e); };
+    let settleHint = false;
+    if (p.lateN) para(`${p.lateN} late ${p.lateN === 1 ? "night" : "nights"} left out, because lights out was 15+ min after the plan.`, "muted");
+    if (p.settle !== null) {
+      const sv = round5(p.settle);
+      para(`She takes about ${dur(sv)} to settle after lights out (last ${p.settleN} nights).`);
+      if (Math.abs(sv - (+S.settle || 0)) >= 10) {
+        const b = document.createElement("button"); b.className = "btn"; b.textContent = `Use ${sv} min settle time (now ${S.settle})`;
+        b.onclick = () => { S.settle = sv; save(); syncInputs(); calc(!!state.log[day]); };
+        body.appendChild(b);
+      }
+      settleHint = Math.abs(sv - (+S.settle || 0)) >= 10;
+    } else if (p.settleN) para(`Settle time: ${p.settleN} of 5 nights logged.`, "muted");
     if (p.n < MIN_NIGHTS) {
-      para(`Log when she fell asleep for ${MIN_NIGHTS} nights and her patterns will show here. ${p.n} of ${MIN_NIGHTS} so far.`, "muted");
+      para(`Log lights out and when she fell asleep for ${MIN_NIGHTS} on-time nights and her patterns will show here. ${p.n} of ${MIN_NIGHTS} so far.`, "muted");
     } else {
       const m = Math.round(p.all);
       if (Math.abs(m) < 5) para(`She falls asleep right around the planned time (last ${p.n} nights).`);
       else para(`She usually falls asleep ${dur(m)} ${m > 0 ? "later" : "earlier"} than planned (last ${p.n} nights).`);
       if (p.nap !== null && p.noNap !== null) para(`Nap days ${signed(Math.round(p.nap))} · No-nap days ${signed(Math.round(p.noNap))}`, "muted");
       if (p.night !== null) para(`Average night sleep: ${dur(p.night)}.`, "muted");
-      if (m >= 10) para("Falling asleep later than planned usually means bedtime is a little early for her.");
+      if (settleHint && Math.abs(m) >= 10) para("Update the settle time first. That may explain the difference.", "muted");
+      else if (m >= 10) para("Falling asleep later than planned usually means bedtime is a little early for her.");
       else if (m <= -10) para("Falling asleep before the planned time usually means she's ready for bed a little earlier.");
       else para("The plan suits her well.");
     }
@@ -519,25 +605,32 @@ details p, details ul { margin: 8px 0; }
       if (a !== null && nx && toMin(nx.wake) !== null) parts.push("Night " + dur(toMin(nx.wake) + 1440 - a));
       meta.textContent = parts.join(" · ");
       const act = document.createElement("div"); act.className = "act";
-      const lab = document.createElement("span"); lab.textContent = "Asleep";
-      const inp = document.createElement("input"); inp.type = "time"; inp.value = e.actual || ""; inp.setAttribute("aria-label", "Fell asleep at, " + dayLabel(k));
-      inp.addEventListener("change", () => {
-        state.log[k].actual = inp.value; save();
-        if (k === day) { cur.actual = inp.value; $("actual").value = inp.value; }
-        calc(false);
+      [["lightsOut", "Lights out"], ["actual", "Asleep"]].forEach(([field, name]) => {
+        const lab = document.createElement("span"); lab.textContent = name;
+        const inp = document.createElement("input"); inp.type = "time"; inp.value = e[field] || ""; inp.setAttribute("aria-label", name + ", " + dayLabel(k));
+        inp.addEventListener("change", () => {
+          state.log[k][field] = inp.value; save();
+          if (k === day) { cur[field] = inp.value; $(field).value = inp.value; }
+          calc(false);
+        });
+        act.append(lab, inp);
       });
-      const pill = document.createElement("span"); pill.className = "pill";
-      if (a !== null && typeof e.base === "number") pill.textContent = signed(a - (e.base + (e.nudge || 0))) + " vs plan";
-      else pill.hidden = true;
-      act.append(lab, inp, pill);
+      const pills = document.createElement("div"); pills.className = "pills";
+      const addPill = (t, c) => { const s = document.createElement("span"); s.className = "pill" + (c ? " " + c : ""); s.textContent = t; pills.appendChild(s); };
+      const lb = lateBy(e), st = settleOf(e);
+      if (lb !== null && lb >= LATE_LIGHTS) addPill(`Lights out ${dur(lb)} late, not counted`, "late");
+      else if (driftOf(e) !== null) addPill(signed(driftOf(e)) + " vs plan");
+      if (st !== null) addPill(`Settled in ${dur(st)}`);
       li.append(top, meta, act);
+      if (pills.childNodes.length) li.append(pills);
       list.appendChild(li);
     });
   }
 
   // ---------- events ----------
   ["wake", "napStart", "napEnd"].forEach((id) => $(id).addEventListener("input", () => { cur[id] = $(id).value; calc(true); }));
-  $("actual").addEventListener("change", () => { cur.actual = $("actual").value; calc(true); });
+  ["actual", "lightsOut"].forEach((id) => $(id).addEventListener("change", () => { cur[id] = $(id).value; calc(true); }));
+  $("lateBtn").addEventListener("click", () => { cur.startedAt = nowHHMM(); calc(true); });
   document.querySelectorAll("[data-nap]").forEach((b) => b.addEventListener("click", () => { cur.napMode = b.dataset.nap; calc(true); }));
   document.querySelectorAll("[data-now]").forEach((b) => b.addEventListener("click", () => {
     const id = b.dataset.now; $(id).value = nowHHMM(); cur[id] = $(id).value;
