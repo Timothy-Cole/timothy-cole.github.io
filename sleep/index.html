@@ -249,6 +249,17 @@ details p, details ul { margin: 8px 0; }
   </section>
 
   <section class="card">
+    <h2>Backup</h2>
+    <div class="row">
+      <button type="button" class="btn" id="exportBtn">Export</button>
+      <button type="button" class="btn" id="importBtn">Import</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <p class="hint" id="backupMsg" aria-live="polite"></p>
+    <div class="hint">Export saves the log and settings as a file you can keep in iCloud, Google Drive or email. Import adds a backup's nights to this phone without removing any. Use it on a new phone or to bring in the other parent's log.</div>
+  </section>
+
+  <section class="card">
     <details>
       <summary>Settings</summary>
       <div class="row" style="margin-top:12px">
@@ -815,6 +826,70 @@ details p, details ul { margin: 8px 0; }
     });
   }
 
+  // ---------- backup ----------
+  const HHMM = /^\d{2}:\d{2}$/, DATE = /^\d{4}-\d{2}-\d{2}$/;
+  const STR_FIELDS = ["wake", "napStart", "napEnd", "actual", "lightsOut", "startedAt"];
+  const NUM_FIELDS = ["nudge", "base", "planned", "plannedLights"];
+  function cleanEntry(e) {
+    if (!e || typeof e !== "object") return null;
+    const o = {};
+    STR_FIELDS.forEach((f) => { if (typeof e[f] === "string" && (e[f] === "" || HHMM.test(e[f]))) o[f] = e[f]; });
+    NUM_FIELDS.forEach((f) => { if (typeof e[f] === "number" && Number.isFinite(e[f])) o[f] = e[f]; });
+    if (["yes", "now", "no"].includes(e.napMode)) o.napMode = e.napMode;
+    if (["happy", "ok", "grumpy", ""].includes(e.mood)) o.mood = e.mood;
+    if (typeof e.wiredOT === "string") o.wiredOT = e.wiredOT.slice(0, 120);
+    return o;
+  }
+  function backupLine() {
+    const n = Object.keys(state.log).length;
+    if (!state.lastExport) { $("backupMsg").textContent = n ? "Not backed up yet." : ""; return; }
+    const days = Math.floor((Date.now() - state.lastExport) / 86400000);
+    $("backupMsg").textContent = `Last backup: ${days === 0 ? "today" : days === 1 ? "yesterday" : days + " days ago"}.` + (days >= 7 && n ? " Worth exporting again." : "");
+  }
+  async function exportBackup() {
+    const data = { app: "bedtime-planner", version: 1, exported: new Date().toISOString(), settings: S, log: state.log };
+    const name = `bedtime-planner-backup-${dkey(new Date())}.json`;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    let done = false;
+    try {
+      const file = new File([blob], name, { type: "application/json" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "Bedtime planner backup" }); done = true; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    if (!done) {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+    state.lastExport = Date.now(); save(); backupLine();
+  }
+  function importBackup(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (e) { $("backupMsg").textContent = "That file isn't a bedtime planner backup."; return; }
+    if (!data || data.app !== "bedtime-planner" || typeof data.log !== "object") { $("backupMsg").textContent = "That file isn't a bedtime planner backup."; return; }
+    const wasEmpty = Object.keys(state.log).length === 0;
+    let added = 0, filled = 0;
+    Object.keys(data.log).forEach((k) => {
+      if (!DATE.test(k)) return;
+      const inc = cleanEntry(data.log[k]); if (!inc) return;
+      const mine = state.log[k];
+      if (!mine) { state.log[k] = inc; added++; return; }
+      let changed = false;   // keep what's on this phone, only fill in blanks
+      Object.keys(inc).forEach((f) => { if ((mine[f] === undefined || mine[f] === "") && inc[f] !== "") { mine[f] = inc[f]; changed = true; } });
+      if (changed) filled++;
+    });
+    let settingsMsg = "";
+    if (wasEmpty && data.settings && typeof data.settings === "object") {
+      const d = data.settings;
+      ["targetWake", "anchorBed"].forEach((f) => { if (typeof d[f] === "string" && HHMM.test(d[f])) S[f] = d[f]; });
+      ["bath", "books", "settle", "need"].forEach((f) => { if (typeof d[f] === "number" && d[f] >= 0 && d[f] <= 900) S[f] = d[f]; });
+      if (typeof d.adapt === "boolean") S.adapt = d.adapt;
+      settingsMsg = " Settings were copied too.";
+    }
+    save();
+    if (state.log[day]) cur = Object.assign({}, state.log[day]);
+    syncInputs(); calc(false);
+    $("backupMsg").textContent = `Imported: ${added} new ${added === 1 ? "night" : "nights"}, ${filled} filled in.${settingsMsg}`;
+  }
+
   // ---------- events ----------
   ["wake", "napStart", "napEnd"].forEach((id) => $(id).addEventListener("input", () => { cur[id] = $(id).value; calc(true); }));
   ["actual", "lightsOut"].forEach((id) => $(id).addEventListener("change", () => { cur[id] = $(id).value; calc(true); }));
@@ -839,11 +914,19 @@ details p, details ul { margin: 8px 0; }
   $("adapt").addEventListener("change", () => { S.adapt = $("adapt").checked; save(); calc(!!state.log[day]); });
   document.addEventListener("pointerdown", (ev) => { if (!$("chartWrap").contains(ev.target)) $("tip").hidden = true; });
 
+  $("exportBtn").addEventListener("click", exportBackup);
+  $("importBtn").addEventListener("click", () => $("importFile").click());
+  $("importFile").addEventListener("change", () => {
+    const f = $("importFile").files[0]; if (!f) return;
+    f.text().then(importBackup).finally(() => { $("importFile").value = ""; });
+  });
+
   setInterval(tick, 30000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { if (activeDay() !== day) location.reload(); else tick(); } });
 
   syncInputs();
   calc(false);
+  backupLine();
 })();
 </script>
 </body>
