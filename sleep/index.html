@@ -95,6 +95,17 @@ input[type="time"], input[type="number"] {
 .pat .muted { color: var(--muted); font-size: 14px; }
 .pat .rec { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-weight: 500; }
 .pat .btn { margin: 0 0 10px; }
+.stepper { display: flex; align-items: center; gap: 12px; }
+.stepper .btn { width: 44px; font-size: 18px; padding: 6px 0; }
+.stepper span { min-width: 5.5em; text-align: center; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; }
+.chip { font: inherit; font-size: 14px; font-weight: 500; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; background: var(--surface); color: var(--text); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.trial { border: 1px solid var(--accent); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.trial p { margin: 0 0 8px; }
+.trial ul { margin: 0 0 10px; padding-left: 18px; font-size: 14px; }
+.trial .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.trial .btn { margin: 0; }
 .switch { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-weight: 500; cursor: pointer; }
 .switch input { width: 20px; height: 20px; accent-color: var(--accent); }
 .chartwrap { position: relative; }
@@ -147,6 +158,18 @@ details p, details ul { margin: 8px 0; }
         <button type="button" data-mood="grumpy">Grumpy</button>
       </div>
       <div class="hint">Her mood in the morning is the best sign of whether last night was enough.</div>
+    </div>
+    <div class="field">
+      <span class="flabel" id="nwLabel">Woke in the night</span>
+      <div class="stepper" role="group" aria-labelledby="nwLabel">
+        <button type="button" class="btn" id="nwMinus" aria-label="One fewer">−</button>
+        <span id="nwCount">0 times</span>
+        <button type="button" class="btn" id="nwPlus" aria-label="One more">+</button>
+      </div>
+      <div id="nwAwakeField" hidden style="margin-top:10px">
+        <label for="nightAwake">Roughly how long awake in total (min)</label>
+        <input type="number" id="nightAwake" min="0" max="300" step="5" placeholder="15">
+      </div>
     </div>
     <div class="field">
       <span class="flabel" id="napLabel">Nap</span>
@@ -216,6 +239,10 @@ details p, details ul { margin: 8px 0; }
         <label for="actual">Fell asleep at</label>
         <div class="tin"><input type="time" id="actual"><button type="button" class="btn" data-now="actual">Now</button></div>
       </div>
+      <div class="chips">
+        <button type="button" class="chip" id="stallChip" aria-pressed="false">Stalling or calling out</button>
+        <button type="button" class="chip" id="offChip" aria-pressed="false">Sick or off night, don't count</button>
+      </div>
       <div class="hint" id="tonightSummary"></div>
     </div>
   </section>
@@ -223,8 +250,6 @@ details p, details ul { margin: 8px 0; }
   <section class="card pat">
     <h2>Her patterns</h2>
     <div id="patBody"></div>
-    <label class="switch"><input type="checkbox" id="adapt"> Adjust the plan to her</label>
-    <div class="hint" id="adaptHint"></div>
   </section>
 
   <section class="card">
@@ -237,7 +262,7 @@ details p, details ul { margin: 8px 0; }
       <span><i class="sw" style="background:var(--c-lights)"></i>Lights out</span>
       <span><i class="sw" style="background:var(--c-asleep)"></i>Asleep</span>
       <span><i class="sw dash"></i>Planned asleep</span>
-      <span><i class="sw ring"></i>Late lights out</span>
+      <span><i class="sw ring"></i>Late or off night</span>
     </div>
     <p class="empty" id="chartEmpty" hidden>The chart appears once 2 nights are logged.</p>
   </section>
@@ -273,6 +298,7 @@ details p, details ul { margin: 8px 0; }
         <div class="field"><label for="settle">Settle (min)</label><input type="number" id="settle" min="0" max="90" step="5"></div>
       </div>
       <div class="hint">Bedtime stays within 30 minutes of her usual bedtime. Settle is the time from lights out until she's asleep.</div>
+      <div class="hint" id="shiftHint" hidden></div>
     </details>
   </section>
 
@@ -287,14 +313,17 @@ details p, details ul { margin: 8px 0; }
       <p>The result is then kept within <strong>30 minutes of her usual bedtime</strong>. A steady bedtime helps her body clock, so no-nap days go to the early end of that range and late naps to the late end. It's never before 6:00pm.</p>
       <p><strong>Wake her by</strong> is the earliest of: the 1h 30m nap cap, 5 hours before her usual bedtime, or the point where more nap would push bedtime past her usual time.</p>
       <p><strong>Wired.</strong> A toddler who's wired at bedtime is often overtired, not undertired. After no nap, a nap under 45 minutes, or more than 5h 30m awake, the planner suggests keeping bedtime and calming things down instead of moving it later. After a decent nap, Wired moves bedtime 15 minutes later.</p>
-      <p><strong>Learning her patterns.</strong> From the last 14 on-time nights (lights out less than 15 minutes after the plan), the planner looks at three things:</p>
+      <p><strong>How far it moves.</strong> Tonight's bedtime never moves more than 45 minutes from her usual bedtime, whatever the naps and Tired or Wired taps add up to.</p>
+      <p><strong>Learning her patterns.</strong> The planner uses up to 14 recent nights since her usual bedtime last changed. It leaves out late nights (lights out 15+ minutes after the plan) and nights marked sick or off. It looks at:</p>
       <ul>
-        <li><strong>Settle time</strong> (lights out to asleep). 15–20 minutes is ideal. Regularly 30 minutes or more suggests she isn't tired enough yet, so a slightly later bedtime may help. Under 10 minutes suggests she may be overtired.</li>
-        <li><strong>Early waking</strong> (30 minutes or more before the wake-up target). Regular early waking usually means bedtime is too late, not too early.</li>
-        <li><strong>Morning mood.</strong> Regular grumpy mornings suggest she needs more sleep. Her total sleep before happy mornings shows what she really needs.</li>
+        <li><strong>Settle time</strong> (lights out to asleep). 15–20 minutes is ideal. Regularly 30 minutes or more suggests she isn't tired enough yet. Under 10 minutes suggests she may be overtired.</li>
+        <li><strong>Stalling.</strong> If most long settles involved stalling or calling out, that's about limits rather than tiredness, so bedtime isn't changed.</li>
+        <li><strong>Early waking</strong> (before 6:00am). 6–7am is normal at this age. Regularly waking before 6 usually means bedtime is too late.</li>
+        <li><strong>Night wakings and morning mood.</strong> Regular night wakings or grumpy mornings suggest she needs more sleep. Her total sleep before happy mornings, minus time awake in the night, shows what she really needs.</li>
       </ul>
-      <p>Early waking or grumpy mornings point to an earlier bedtime. Long settling points to a later one. When both show up together, it usually means too much daytime sleep. With the switch on, the plan moves by 15 or 30 minutes.</p>
-      <p><strong>Ready to drop the nap?</strong> If she settles 15 minutes or more faster on no-nap days, the planner suggests trying quiet time instead.</p>
+      <p><strong>4-night trials.</strong> A suggested change runs as a 4-night trial, because it takes a few nights for her to adjust. During the trial nothing else changes. Afterwards the planner compares the trial nights with the nights before, and you decide whether to keep it or go back.</p>
+      <p><strong>Bedtime fading.</strong> For long settling, lights out moves to when she's usually falling asleep anyway, so she drops off quickly. Then, every 4 nights, if she's settling in 20 minutes or less, it moves 15 minutes earlier until it's back at her original bedtime.</p>
+      <p><strong>Ready to drop the nap?</strong> If she settles 15 minutes or more faster on no-nap days, the planner suggests trying quiet time instead. Long settling together with early waking or grumpy mornings usually means too much daytime sleep.</p>
       <p><strong>Catch-up routine.</strong> If you start late, books are cut down to 15 minutes, then the bath to 10 minutes, keeping the same order. If she's also wired after a good nap, each Wired tap still adds 15 minutes of books.</p>
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. Awake times, settle times and the early-waking signs are common advice from sleep consultants, not official guidelines. This is a guide only. Your child's own cues come first.</p>
     </details>
@@ -311,7 +340,9 @@ details p, details ul { margin: 8px 0; }
   const NAP_CAP = 90;              // daycare cap
   const LATE_NAP_END = 15 * 60 + 30;
   const LATE_LIGHTS = 15;          // lights out this late = night not used for learning
-  const EARLY_BY = 30;             // woke this much before target = early waking
+  const EARLY_WAKE = 6 * 60;       // waking before 6:00am counts as early; 6-7am is normal at 3
+  const MAX_SWING = 45;            // tonight never moves more than this from her usual bedtime
+  const TRIAL_NIGHTS = 4;          // nights a change runs before the check-in
   const LONG_SETTLE = 30, FAST_SETTLE = 10;
   const OT_NAP = 45, OT_AWAKE = 330; // overtired signs
   const MIN_N = 5;                 // data points before a signal counts
@@ -351,9 +382,9 @@ details p, details ul { margin: 8px 0; }
     let s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
     if (!s || typeof s !== "object") s = {};
-    s.settings = Object.assign({ targetWake: "06:45", bath: 20, books: 30, settle: 30, need: 720, adapt: false }, s.settings || {});
+    s.settings = Object.assign({ targetWake: "06:45", bath: 20, books: 30, settle: 30, need: 720 }, s.settings || {});
     if (!s.settings.anchorBed) s.settings.anchorBed = s.settings.latestBed || "20:00";
-    delete s.settings.latestBed;
+    delete s.settings.latestBed; delete s.settings.adapt;
     s.log = s.log && typeof s.log === "object" ? s.log : {};
     if (!s.migrated) {
       const old = (k) => { try { return localStorage.getItem("sleep." + k); } catch (e) { return null; } };
@@ -373,7 +404,7 @@ details p, details ul { margin: 8px 0; }
   function draft() {
     const keys = Object.keys(state.log).sort();
     const last = keys.length ? state.log[keys[keys.length - 1]] : null;
-    return { wake: S.targetWake, mood: "", napMode: "yes", napStart: (last && last.napStart) || "12:30", napEnd: (last && last.napEnd) || "14:00", nudge: 0, actual: "", lightsOut: "" };
+    return { wake: S.targetWake, mood: "", napMode: "yes", napStart: (last && last.napStart) || "12:30", napEnd: (last && last.napEnd) || "14:00", nudge: 0, actual: "", lightsOut: "", nightWakes: 0 };
   }
   const commit = () => { state.log[day] = Object.assign({}, cur); save(); };
 
@@ -414,7 +445,7 @@ details p, details ul { margin: 8px 0; }
     const byWindow = napStart !== null ? napEnd + WAKE_WINDOW : -Infinity;
     const napWord = e.napMode === "now" ? "a nap to " + fmt(napEnd) : `a ${dur(napLen)} nap`;
     const lateNap = byWindow > byNeed;
-    const raw = round5(Math.max(byNeed, byWindow));
+    const raw = round5(Math.max(byNeed, byWindow)) + (+S.shift || 0);   // shift = her personal adjustment from trials
     const lo = anchor - ANCHOR_FLEX, hi = anchor + ANCHOR_FLEX;
     let base = Math.min(hi, Math.max(lo, raw));
 
@@ -464,28 +495,32 @@ details p, details ul { margin: 8px 0; }
   };
   const settleOf = (e) => { const lo = eveMin(e.lightsOut), a = eveMin(e.actual); if (lo === null || a === null) return null; const d = a - lo; return d >= 0 && d <= 180 ? d : null; };
   const napLenOf = (e) => { if (e.napMode === "no") return 0; const s = toMin(e.napStart), n = toMin(e.napEnd); return e.napMode === "yes" && s !== null && n !== null && n > s ? n - s : null; };
-  const earlyWake = (w) => w !== null && w <= toMin(S.targetWake) - EARLY_BY;
+  const earlyWake = (w) => w !== null && w < EARLY_WAKE;
+  const toHHMM = (m) => { m = ((m % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ":" + pad(m % 60); };
   const morningAfter = (k) => state.log[nextKey(k)] || null;
 
-  function patterns() {
-    const keys = Object.keys(state.log).sort().reverse();
-    const p = { counted: 0, lateN: 0, settles: [], napSet: [], noNapSet: [], mornings: 0, earlyN: 0, moods: 0, grumpyN: 0, happyTotals: [], nights: [] };
+  function collect(keys) {   // keys newest first
+    const p = { counted: 0, lateN: 0, offN: 0, settles: [], napSet: [], noNapSet: [], asleeps: [], planneds: [], longN: 0, longStallN: 0,
+      mornings: 0, earlyN: 0, wakeN: 0, moods: 0, grumpyN: 0, happyTotals: [], nights: [] };
     for (const k of keys) {
-      if (k === day && !state.log[k].actual) continue;   // tonight isn't over yet
       const e = state.log[k];
-      if (typeof e.base !== "number") continue;
-      if (p.counted + p.lateN >= 14) break;
+      if (!e || typeof e.base !== "number") continue;
+      if (k === day && !e.actual) continue;   // tonight isn't over yet
+      if (p.counted + p.lateN + p.offN >= 14) break;
+      if (e.off) { p.offN++; continue; }
       if (isLate(e)) { p.lateN++; continue; }
       p.counted++;
       const st = settleOf(e);
-      if (st !== null) { p.settles.push(st); (e.napMode === "no" ? p.noNapSet : p.napSet).push(st); }
-      const nx = morningAfter(k);
-      const w = nx ? toMin(nx.wake) : null;
-      const a = eveMin(e.actual);
+      if (st !== null) {
+        p.settles.push(st); (e.napMode === "no" ? p.noNapSet : p.napSet).push(st);
+        if (st >= LONG_SETTLE) { p.longN++; if (e.stall) p.longStallN++; }
+      }
+      const nx = morningAfter(k), w = nx ? toMin(nx.wake) : null, a = eveMin(e.actual);
+      if (a !== null) { p.asleeps.push(a); p.planneds.push(e.planned); }
       let total = null;
       if (w !== null) {
-        p.mornings++; if (earlyWake(w)) p.earlyN++;
-        if (a !== null) { const night = w + 1440 - a; p.nights.push(night); const nl = napLenOf(e); if (nl !== null) total = night + nl; }
+        p.mornings++; if (earlyWake(w)) p.earlyN++; if (+nx.nightWakes > 0) p.wakeN++;
+        if (a !== null) { const night = w + 1440 - a - (+nx.nightAwake || 0); p.nights.push(night); const nl = napLenOf(e); if (nl !== null) total = night + nl; }
       }
       if (nx && nx.mood) { p.moods++; if (nx.mood === "grumpy") p.grumpyN++; if (nx.mood === "happy" && total !== null) p.happyTotals.push(total); }
     }
@@ -493,27 +528,115 @@ details p, details ul { margin: 8px 0; }
     p.napDiff = p.napSet.length >= 3 && p.noNapSet.length >= 3 ? median(p.napSet) - median(p.noNapSet) : null;
     return p;
   }
+  const keysBetween = (from, to) => Object.keys(state.log).filter((k) => (!from || k >= from) && (!to || k <= to)).sort().reverse();
+  // Only nights since her usual bedtime last changed, so before and after aren't mixed.
+  const patterns = () => collect(keysBetween(state.lastChange || null, null));
 
   // Combine the coach's signals into one suggestion.
   function recommend(p) {
-    const earlyRate = p.mornings >= MIN_N ? p.earlyN / p.mornings : null;
-    const grumpyRate = p.moods >= MIN_N ? p.grumpyN / p.moods : null;
+    const anchor = toMin(S.anchorBed);
+    const rate = (n, d) => (d >= MIN_N ? n / d : null);
+    const earlyRate = rate(p.earlyN, p.mornings), grumpyRate = rate(p.grumpyN, p.moods), wakeRate = rate(p.wakeN, p.mornings);
     if (p.settle === null && earlyRate === null && grumpyRate === null) return null;
-    const shortSleep = (earlyRate !== null && earlyRate >= 0.4) || (grumpyRate !== null && grumpyRate >= 0.4);
-    const strongShort = (earlyRate !== null && earlyRate >= 0.6) || (grumpyRate !== null && grumpyRate >= 0.6);
+    const why = [];
+    if (earlyRate !== null && earlyRate >= 0.4) why.push(`waking before 6am on ${p.earlyN} of ${p.mornings} mornings`);
+    if (grumpyRate !== null && grumpyRate >= 0.4) why.push(`grumpy on ${p.grumpyN} of ${p.moods} mornings`);
+    if (wakeRate !== null && wakeRate >= 0.4) why.push(`waking in the night on ${p.wakeN} of ${p.mornings} nights`);
+    const shortSleep = why.length > 0;
+    const strong = [earlyRate, grumpyRate, wakeRate].some((r) => r !== null && r >= 0.6);
     const longSettle = p.settle !== null && p.settle >= LONG_SETTLE;
     const fastSettle = p.settle !== null && p.settle < FAST_SETTLE;
-    const why = [];
-    if (earlyRate !== null && earlyRate >= 0.4) why.push(`waking early on ${p.earlyN} of ${p.mornings} mornings`);
-    if (grumpyRate !== null && grumpyRate >= 0.4) why.push(`grumpy on ${p.grumpyN} of ${p.moods} mornings`);
-    if (shortSleep && longSettle) return { offset: 0, text: `She's ${why.join(" and ")}, but also taking ${dur(round5(p.settle))} to settle. Together that usually means too much daytime sleep. Try a shorter or earlier nap rather than changing bedtime.` };
-    if (longSettle && p.napDiff !== null && p.napDiff >= 15) return { offset: 0, nap: true, text: `She takes about ${dur(round5(median(p.napSet)))} to settle on nap days but only ${dur(round5(median(p.noNapSet)))} on no-nap days. The nap is the likely cause, not bedtime. Try a shorter nap, or quiet time instead. Worth raising with daycare.` };
-    if (shortSleep) return { offset: strongShort ? -30 : -15, text: `She's ${why.join(" and ")}. That usually means she needs an earlier bedtime.` };
-    if (longSettle) return { offset: p.settle >= 45 ? 30 : 15, text: `She takes about ${dur(round5(p.settle))} to settle. Regularly 30 minutes or more usually means she isn't tired enough at lights out, so a slightly later bedtime may help.` };
-    if (fastSettle) return { offset: -15, text: `She's dropping off in under 10 minutes. That can mean she's overtired by lights out, so a slightly earlier bedtime may help.` };
-    return { offset: 0, text: "Settling, wake-ups and mornings all look good. The plan suits her." };
+    const list = (a) => (a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a[0]);
+    if (longSettle && p.longN && p.longStallN / p.longN >= 0.5) return { kind: "stall", text: `Most of her long settles (${p.longStallN} of ${p.longN}) involved stalling or calling out. That's usually about limits, not tiredness, so keep bedtime as it is. Try a last drink and toilet before lights out, one or two "tickets" she can use for calling out, and calm, boring returns to bed.` };
+    if (shortSleep && longSettle) return { kind: "nap", text: `She's ${list(why)}, but also taking ${dur(round5(p.settle))} to settle. Together that usually means too much daytime sleep. Try a shorter or earlier nap rather than changing bedtime.` };
+    if (longSettle && p.napDiff !== null && p.napDiff >= 15) return { kind: "nap", text: `She takes about ${dur(round5(median(p.napSet)))} to settle on nap days but only ${dur(round5(median(p.noNapSet)))} on no-nap days. The nap is the likely cause, not bedtime. Try a shorter nap, or quiet time instead. Worth raising with daycare.` };
+    if (shortSleep) { const by = strong ? 30 : 15; return { kind: "earlier", delta: -by, text: `She's ${list(why)}. That usually means she needs an earlier bedtime. Try bedtime ${by} minutes earlier for ${TRIAL_NIGHTS} nights.` }; }
+    if (longSettle) {
+      // Fading: lights out when she's usually asleep anyway (settle planned at 15), so asleep target = typical asleep + 15.
+      const typAsleep = round5(median(p.asleeps));
+      const delta = Math.max(15, typAsleep + 15 - round5(median(p.planneds)));
+      return { kind: "fade", delta, text: `She takes about ${dur(round5(p.settle))} to settle. Try bedtime fading: lights out at about ${fmt(typAsleep)}, when she's usually falling asleep anyway, so she drops off quickly. Then every ${TRIAL_NIGHTS} nights, if she's settling in 20 minutes or less, bring it 15 minutes earlier until you're back where you started.` };
+    }
+    if (fastSettle) return { kind: "earlier", delta: -15, text: `She's dropping off in under 10 minutes. That can mean she's overtired by lights out. Try bedtime 15 minutes earlier for ${TRIAL_NIGHTS} nights.` };
+    return { kind: "ok", text: "Settling, nights and mornings all look good. The plan suits her." };
   }
-  const learnedOffset = (p) => { if (!S.adapt) return 0; const r = recommend(p); return r ? r.offset : 0; };
+
+  // ---------- 4-night trials ----------
+  const firstTrialNight = () => (cur.actual ? nextKey(day) : day);
+  function startTrial(kind, delta) {
+    const prev = state.trial && state.trial.kind === "fade" && kind === "fade" ? state.trial : null;
+    const shift = +S.shift || 0;
+    state.trial = { kind, delta, start: firstTrialNight(), from: S.anchorBed, fromSettle: S.settle, fromShift: shift,
+      origFrom: prev ? prev.origFrom : S.anchorBed, origSettle: prev ? prev.origSettle : S.settle, origShift: prev ? prev.origShift : shift };
+    S.shift = shift + delta;
+    S.anchorBed = toHHMM(toMin(S.anchorBed) + delta);
+    if (kind === "fade") S.settle = 15;
+    state.lastChange = state.trial.start;
+    save(); syncInputs(); calc(!!state.log[day]);
+  }
+  function endTrial(keep, settleTo) {
+    const t = state.trial; if (!t) return;
+    if (!keep) {
+      const fade = t.kind === "fade";
+      S.anchorBed = fade ? t.origFrom : t.from;
+      S.settle = fade ? t.origSettle : t.fromSettle;
+      S.shift = fade ? t.origShift : t.fromShift;
+      state.lastChange = firstTrialNight();
+    } else if (settleTo) S.settle = settleTo;
+    state.trial = null; save(); syncInputs(); calc(!!state.log[day]);
+  }
+  function renderTrial(body) {
+    const t = state.trial;
+    const box = el("div", "trial"); body.appendChild(box);
+    const para = (txt) => box.appendChild(el("p", null, txt));
+    const acts = el("div", "acts");
+    const btn = (txt, fn, primary) => { const b = el("button", "btn" + (primary ? " primary" : ""), txt); b.onclick = fn; acts.appendChild(b); };
+    const due = shiftKey(t.start, TRIAL_NIGHTS);
+    const name = t.kind === "fade" ? "Bedtime fading" : "Trial";
+    const move = (m) => (m === 0 ? "held where it is" : `${dur(m)} ${m < 0 ? "earlier" : "later"}`);
+    const what = t.kind === "fade"
+      ? `bedtime ${t.delta === 0 ? "held" : move(t.delta)} this step, ${move((+S.shift || 0) - t.origShift)} overall`
+      : `bedtime ${move(t.delta)}`;
+    if (day < due) {
+      const n = Math.round((parseKey(day) - parseKey(t.start)) / 86400000) + 1;
+      para(`${name}: ${what}. ` + (n < 1 ? "Starts tomorrow. " : `Night ${n} of ${TRIAL_NIGHTS}. `) + `Check-in on ${dayLabel(due)}. Keep everything else the same until then.`);
+      btn("Stop and go back", () => endTrial(false));
+      box.appendChild(acts); return;
+    }
+    // Check-in: trial nights vs the nights before it
+    const during = collect(keysBetween(t.start, shiftKey(t.start, TRIAL_NIGHTS - 1)));
+    const before = collect(keysBetween(null, shiftKey(t.start, -1)));
+    const med = (a) => (a.length ? round5(median(a)) : null);
+    const sb = med(before.settles), sd = med(during.settles);
+    const lines = el("ul"); const line = (txt) => lines.appendChild(el("li", null, txt));
+    let better = 0, worse = 0;
+    if (sd !== null) {
+      line(`Settling: ${sb !== null ? dur(sb) + " → " : ""}${dur(sd)}`);
+      if (sb !== null) { const d = Math.abs(sd - 17.5) - Math.abs(sb - 17.5); if (d <= -5) better++; else if (d >= 5) worse++; }
+    }
+    [["earlyN", "mornings", "Woke before 6am"], ["wakeN", "mornings", "Woke in the night"], ["grumpyN", "moods", "Grumpy mornings"]].forEach(([n, d, label]) => {
+      if (!during[d]) return;
+      line(`${label}: ${before[d] ? `${before[n]} of ${before[d]} → ` : ""}${during[n]} of ${during[d]}`);
+      if (before[d]) { const diff = during[n] / during[d] - before[n] / before[d]; if (diff <= -0.15) better++; else if (diff >= 0.15) worse++; }
+    });
+    const enough = during.settles.length >= 2 || during.mornings >= 2;
+    para(`${name} check-in after ${TRIAL_NIGHTS} nights: ${what}.`);
+    if (lines.childNodes.length) box.appendChild(lines);
+    if (t.kind === "fade") {
+      const left = (+S.shift || 0) - t.origShift;   // how far later than where fading started
+      if (sd !== null && sd <= 20) {
+        if (left <= 0) { para(`Fading done: back where you started and settling in ${dur(sd)}.`); btn("Finish", () => endTrial(true, Math.max(15, sd)), true); }
+        else { const step = Math.min(15, left); para(`She's settling in ${dur(sd)}, so move ${step} minutes earlier.`); btn(`Next step: ${step} min earlier`, () => startTrial("fade", -step), true); btn("Stop fading", () => endTrial(false)); }
+      } else {
+        para(sd === null ? "Not enough settle times logged to tell yet." : `Still settling in ${dur(sd)} (aim for 20 minutes or less). Hold this bedtime a bit longer.`);
+        btn(`Hold for ${TRIAL_NIGHTS} more nights`, () => startTrial("fade", 0), true); btn("Stop fading", () => endTrial(false));
+      }
+    } else {
+      para(!enough ? "Not enough logged during the trial to tell. Your call." : better > worse ? "Looks better. Worth keeping." : worse > better ? "Looks worse. Going back is probably best." : "No clear change. Your call, and keeping it is fine.");
+      btn("Keep it", () => endTrial(true), better >= worse); btn("Go back", () => endTrial(false), worse > better);
+    }
+    box.appendChild(acts);
+  }
 
   // ---------- rendering ----------
   let plan = null;
@@ -522,7 +645,14 @@ details p, details ul { margin: 8px 0; }
     ["wake", "napStart", "napEnd", "actual", "lightsOut"].forEach((id) => { $(id).value = cur[id] || ""; });
     ["targetWake", "anchorBed", "bath", "books", "settle"].forEach((id) => { $(id).value = S[id]; });
     $("needH").value = (+S.need || 720) / 60;
-    $("adapt").checked = !!S.adapt;
+    $("nightAwake").value = cur.nightAwake || "";
+    const sh = +S.shift || 0, hint = $("shiftHint"); hint.innerHTML = ""; hint.hidden = !sh;
+    if (sh) {
+      hint.append(`Trial adjustment: ${dur(sh)} ${sh < 0 ? "earlier" : "later"} than the standard sleep-need rule. `);
+      const r = el("button", "linkbtn", "Reset");
+      r.onclick = () => { S.shift = 0; save(); syncInputs(); calc(!!state.log[day]); };
+      hint.append(r);
+    }
   }
 
   function showError(msg) {
@@ -561,20 +691,30 @@ details p, details ul { margin: 8px 0; }
     document.querySelectorAll("[data-mood]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mood === cur.mood)));
     $("napTimes").hidden = mode === "no";
     $("napEndField").hidden = mode === "now";
+    const nw = +cur.nightWakes || 0;
+    $("nwCount").textContent = nw === 1 ? "1 time" : `${nw} times`;
+    $("nwAwakeField").hidden = !nw;
+    $("stallChip").setAttribute("aria-pressed", String(!!cur.stall));
+    $("offChip").setAttribute("aria-pressed", String(!!cur.off));
     const w = toMin(cur.wake);
-    $("wakeHint").textContent = `Planning for a ${fmt(toMin(S.targetWake))} wake-up tomorrow.` + (w !== null && earlyWake(w) ? " She woke early today, which can be a sign last night's bedtime was too late." : "");
+    $("wakeHint").textContent = `Planning for a ${fmt(toMin(S.targetWake))} wake-up tomorrow.` + (w !== null && earlyWake(w) ? " She woke before 6am today, which can be a sign last night's bedtime was too late." : "");
 
     const r = model(cur);
     if (r.error) { showError(r.error); if (persist) commit(); renderSide(); return; }
 
     const p = patterns();
-    const offset = learnedOffset(p);
+    const anchor = toMin(S.anchorBed);
+    const lo45 = anchor - MAX_SWING, hi45 = anchor + MAX_SWING;
+    const want = r.base + (cur.nudge || 0);
+    const asleep = Math.min(hi45, Math.max(lo45, want));
+    // keep the nudge to what actually applies, so taps past the limit don't pile up
+    if (asleep !== want && cur.nudge) cur.nudge = asleep - Math.min(hi45, Math.max(lo45, r.base));
     const nudge = cur.nudge || 0;
-    const asleep = r.base + offset + nudge;
     cur.base = r.base; cur.planned = asleep;
 
     let why = r.why;
-    if (offset) why += ` Moved ${dur(offset)} ${offset > 0 ? "later" : "earlier"} to suit her recent nights.`;
+    if (+S.shift) why += ` Includes her ${dur(S.shift)} ${S.shift < 0 ? "earlier" : "later"} adjustment from trials.`;
+    if (asleep !== want) why += " Held at 45 minutes from her usual bedtime, the most it moves in one night.";
 
     $("wakeBy").hidden = mode !== "now";
     if (mode === "now") { $("wakeByTime").textContent = fmt(r.wakeBy); $("wakeByWhy").textContent = r.wakeByWhy; }
@@ -626,7 +766,7 @@ details p, details ul { margin: 8px 0; }
     $("tLights").textContent = fmt(shown.lights);    $("dSettle").textContent = `${settle} min to settle`;
     $("tSleep").textContent = fmt(shown.asleep);
 
-    const tParts = [];
+    const tParts = cur.off ? ["Off night: not used for learning."] : [];
     const lb = lateBy(cur), st = settleOf(cur);
     if (lb !== null) tParts.push(lb >= LATE_LIGHTS ? `Lights out ${dur(lb)} late, so tonight won't be used for learning.` : lb <= -5 ? `Lights out ${dur(lb)} early.` : "Lights out on time.");
     if (st !== null) tParts.push(`Settled in ${dur(st)}${st > 20 ? " (15–20 min is ideal)" : ""}.`);
@@ -685,23 +825,27 @@ details p, details ul { margin: 8px 0; }
     const body = $("patBody"); body.innerHTML = "";
     const para = (t, c) => body.appendChild(el("p", c || null, t));
     const button = (t, fn) => { const b = el("button", "btn", t); b.onclick = fn; body.appendChild(b); };
-    const rec = recommend(p);
+    const rec = state.trial ? null : recommend(p);
+    if (state.trial) renderTrial(body);
 
-    if (p.settles.length < MIN_N || p.mornings < MIN_N) {
-      para(`Still learning: ${Math.min(p.settles.length, MIN_N)} of ${MIN_N} nights with lights out and asleep logged, ${Math.min(p.mornings, MIN_N)} of ${MIN_N} mornings with a wake-up time.`, "muted");
+    if (!state.trial && (p.settles.length < MIN_N || p.mornings < MIN_N)) {
+      para(`Still learning: ${Math.min(p.settles.length, MIN_N)} of ${MIN_N} nights with lights out and asleep logged, ${Math.min(p.mornings, MIN_N)} of ${MIN_N} mornings with a wake-up time.` + (state.lastChange ? " Counting from when her usual bedtime last changed." : ""), "muted");
     }
-    if (rec) para(rec.text, "rec");
+    if (rec) {
+      para(rec.text, "rec");
+      if (rec.delta !== undefined) button(rec.kind === "fade" ? "Start bedtime fading" : `Start a ${TRIAL_NIGHTS}-night trial`, () => startTrial(rec.kind, rec.delta));
+    }
 
     if (p.settle !== null) {
       const sv = round5(p.settle);
       para(`She takes about ${dur(sv)} to settle after lights out (15–20 min is ideal).`);
-      if (Math.abs(sv - (+S.settle || 0)) >= 10) button(`Plan for ${sv} min settle time (now ${S.settle})`, () => { S.settle = sv; save(); syncInputs(); calc(!!state.log[day]); });
+      if (!state.trial && !(rec && (rec.kind === "fade" || rec.kind === "stall")) && Math.abs(sv - (+S.settle || 0)) >= 10) button(`Plan for ${sv} min settle time (now ${S.settle})`, () => { S.settle = sv; save(); syncInputs(); calc(!!state.log[day]); });
     }
-    if (p.mornings >= MIN_N) para(`Woke early (before ${fmt(toMin(S.targetWake) - EARLY_BY)}) on ${p.earlyN} of ${p.mornings} mornings.`, "muted");
+    if (p.mornings >= MIN_N) para(`Woke before 6am on ${p.earlyN} of ${p.mornings} mornings. Woke in the night on ${p.wakeN} of ${p.mornings} nights.`, "muted");
     if (p.moods >= MIN_N) para(`Grumpy on ${p.grumpyN} of ${p.moods} mornings.`, "muted");
     if (p.nights.length) para(`Average night sleep: ${dur(p.nights.reduce((x, y) => x + y, 0) / p.nights.length)}.`, "muted");
 
-    if (p.napDiff !== null && !(rec && rec.nap)) {
+    if (p.napDiff !== null && !(rec && rec.kind === "nap")) {
       const diff = p.napDiff;
       if (diff >= 15) para(`She settles about ${dur(round5(diff))} faster on no-nap days. She may be ready to swap the nap for quiet time. Worth raising with daycare.`, "rec");
       else para(`She settles about the same on nap and no-nap days (${signed(round5(diff))}), so the nap still seems to suit her.`, "muted");
@@ -712,14 +856,7 @@ details p, details ul { margin: 8px 0; }
       para(`Before happy mornings she'd had about ${dur(hv)} of sleep (night and nap).`);
       if (Math.abs(hv - (+S.need || 720)) >= 20) button(`Use ${dur(hv)} as her sleep need (now ${dur(+S.need || 720)})`, () => { S.need = hv; save(); syncInputs(); calc(!!state.log[day]); });
     }
-    if (p.lateN) para(`${p.lateN} late ${p.lateN === 1 ? "night" : "nights"} left out, because lights out was 15+ min after the plan.`, "muted");
-
-    const off = rec ? rec.offset : 0;
-    const dir = (o) => `${dur(o)} ${o > 0 ? "later" : "earlier"}`;
-    $("adaptHint").textContent = !rec
-      ? "This turns on once there's enough logged."
-      : S.adapt ? (off ? `Moving bedtime ${dir(off)}.` : "On. No change needed right now.")
-                : (off ? `If you turn this on, bedtime moves ${dir(off)}.` : "Off. No change would be made right now.");
+    if (p.lateN || p.offN) para(`Left out: ${[p.lateN ? `${p.lateN} late` : "", p.offN ? `${p.offN} sick or off` : ""].filter(Boolean).join(", ")} ${p.lateN + p.offN === 1 ? "night" : "nights"}.`, "muted");
   }
 
   // ---------- chart: lights out → asleep per night, planned asleep as a dash ----------
@@ -729,7 +866,7 @@ details p, details ul { margin: 8px 0; }
     const days = []; for (let i = 13; i >= 0; i--) days.push(shiftKey(day, -i));
     const pts = days.map((k) => {
       const e = state.log[k] || {};
-      return { k, e, lo: eveMin(e.lightsOut), a: eveMin(e.actual), pl: typeof e.planned === "number" ? e.planned : null, late: isLate(e) };
+      return { k, e, lo: eveMin(e.lightsOut), a: eveMin(e.actual), pl: typeof e.planned === "number" ? e.planned : null, late: isLate(e) || !!e.off };
     });
     const logged = pts.filter((q) => q.lo !== null || q.a !== null);
     const show = logged.length >= 2;
@@ -775,11 +912,13 @@ details p, details ul { margin: 8px 0; }
     const tip = $("tip"); tip.innerHTML = "";
     tip.append(el("b", null, dayLabel(q.k)));
     const line = (t, c) => tip.append(el("div", c || null, t));
-    if (q.lo !== null) line(`Lights out ${fmt(q.lo)}${q.late ? " (late)" : ""}`);
+    if (q.e.off) line("Sick or off night, not counted", "m");
+    if (q.lo !== null) line(`Lights out ${fmt(q.lo)}${isLate(q.e) ? " (late)" : ""}${q.e.stall ? ", stalling" : ""}`);
     if (q.a !== null) line(`Asleep ${fmt(q.a)}` + (q.lo !== null && q.a >= q.lo ? ` · settled in ${dur(q.a - q.lo)}` : ""));
     if (q.pl !== null) line(`Planned asleep ${fmt(q.pl)}`, "m");
     const nx = morningAfter(q.k), w = nx ? toMin(nx.wake) : null;
     if (w !== null) line(`Next morning: woke ${fmt(w)}${earlyWake(w) ? " (early)" : ""}${nx.mood ? ", " + nx.mood : ""}`, "m");
+    if (nx && +nx.nightWakes > 0) line(`Woke ${nx.nightWakes}× in the night${nx.nightAwake ? ` (${dur(+nx.nightAwake)})` : ""}`, "m");
     tip.hidden = false;
     const wrap = $("chartWrap").clientWidth, tw = tip.offsetWidth;
     tip.style.left = Math.max(0, Math.min(wrap - tw, frac * wrap - tw / 2)) + "px";
@@ -803,7 +942,7 @@ details p, details ul { margin: 8px 0; }
       else if (e.napStart && e.napEnd && e.napMode === "yes") parts.push(`Nap ${fmt(toMin(e.napStart))}–${fmt(toMin(e.napEnd))}`);
       if (typeof e.planned === "number") parts.push("Planned " + fmt(e.planned));
       const nx = morningAfter(k), a = eveMin(e.actual), w = nx ? toMin(nx.wake) : null;
-      if (a !== null && w !== null) parts.push("Night " + dur(w + 1440 - a));
+      if (a !== null && w !== null) parts.push("Night " + dur(w + 1440 - a - (+nx.nightAwake || 0)));
       const act = el("div", "act");
       [["lightsOut", "Lights out"], ["actual", "Asleep"]].forEach(([field, name]) => {
         const inp = document.createElement("input"); inp.type = "time"; inp.value = e[field] || ""; inp.setAttribute("aria-label", name + ", " + dayLabel(k));
@@ -816,10 +955,13 @@ details p, details ul { margin: 8px 0; }
       });
       const pills = el("div", "pills");
       const lb = lateBy(e), st = settleOf(e), dr = driftOf(e);
-      if (lb !== null && lb >= LATE_LIGHTS) pills.append(el("span", "pill late", `Lights out ${dur(lb)} late, not counted`));
+      if (e.off) pills.append(el("span", "pill late", "Sick or off night, not counted"));
+      else if (lb !== null && lb >= LATE_LIGHTS) pills.append(el("span", "pill late", `Lights out ${dur(lb)} late, not counted`));
       else if (dr !== null) pills.append(el("span", "pill", signed(dr) + " vs plan"));
       if (st !== null) pills.append(el("span", "pill", `Settled in ${dur(st)}`));
-      if (w !== null && earlyWake(w)) pills.append(el("span", "pill late", `Woke early next day (${fmt(w)})`));
+      if (e.stall) pills.append(el("span", "pill", "Stalling"));
+      if (nx && +nx.nightWakes > 0) pills.append(el("span", "pill", `Woke ${nx.nightWakes}× in the night${nx.nightAwake ? ` (${dur(+nx.nightAwake)})` : ""}`));
+      if (w !== null && earlyWake(w)) pills.append(el("span", "pill late", `Woke before 6am (${fmt(w)})`));
       li.append(top, el("div", "meta", parts.join(" · ")), act);
       if (pills.childNodes.length) li.append(pills);
       list.appendChild(li);
@@ -829,7 +971,7 @@ details p, details ul { margin: 8px 0; }
   // ---------- backup ----------
   const HHMM = /^\d{2}:\d{2}$/, DATE = /^\d{4}-\d{2}-\d{2}$/;
   const STR_FIELDS = ["wake", "napStart", "napEnd", "actual", "lightsOut", "startedAt"];
-  const NUM_FIELDS = ["nudge", "base", "planned", "plannedLights"];
+  const NUM_FIELDS = ["nudge", "base", "planned", "plannedLights", "nightWakes", "nightAwake"];
   function cleanEntry(e) {
     if (!e || typeof e !== "object") return null;
     const o = {};
@@ -837,6 +979,8 @@ details p, details ul { margin: 8px 0; }
     NUM_FIELDS.forEach((f) => { if (typeof e[f] === "number" && Number.isFinite(e[f])) o[f] = e[f]; });
     if (["yes", "now", "no"].includes(e.napMode)) o.napMode = e.napMode;
     if (["happy", "ok", "grumpy", ""].includes(e.mood)) o.mood = e.mood;
+    if (typeof e.stall === "boolean") o.stall = e.stall;
+    if (typeof e.off === "boolean") o.off = e.off;
     if (typeof e.wiredOT === "string") o.wiredOT = e.wiredOT.slice(0, 120);
     return o;
   }
@@ -847,7 +991,7 @@ details p, details ul { margin: 8px 0; }
     $("backupMsg").textContent = `Last backup: ${days === 0 ? "today" : days === 1 ? "yesterday" : days + " days ago"}.` + (days >= 7 && n ? " Worth exporting again." : "");
   }
   async function exportBackup() {
-    const data = { app: "bedtime-planner", version: 1, exported: new Date().toISOString(), settings: S, log: state.log };
+    const data = { app: "bedtime-planner", version: 1, exported: new Date().toISOString(), settings: S, log: state.log, trial: state.trial || null, lastChange: state.lastChange || null };
     const name = `bedtime-planner-backup-${dkey(new Date())}.json`;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     let done = false;
@@ -881,7 +1025,11 @@ details p, details ul { margin: 8px 0; }
       const d = data.settings;
       ["targetWake", "anchorBed"].forEach((f) => { if (typeof d[f] === "string" && HHMM.test(d[f])) S[f] = d[f]; });
       ["bath", "books", "settle", "need"].forEach((f) => { if (typeof d[f] === "number" && d[f] >= 0 && d[f] <= 900) S[f] = d[f]; });
-      if (typeof d.adapt === "boolean") S.adapt = d.adapt;
+      if (typeof d.shift === "number" && Math.abs(d.shift) <= 180) S.shift = d.shift;
+      const tr = data.trial;
+      if (tr && typeof tr === "object" && DATE.test(tr.start || "") && HHMM.test(tr.from || "") && HHMM.test(tr.origFrom || "") && ["earlier", "fade"].includes(tr.kind)
+        && ["delta", "fromSettle", "fromShift", "origSettle", "origShift"].every((f) => typeof tr[f] === "number" && Math.abs(tr[f]) <= 600)) state.trial = tr;
+      if (typeof data.lastChange === "string" && DATE.test(data.lastChange)) state.lastChange = data.lastChange;
       settingsMsg = " Settings were copied too.";
     }
     save();
@@ -911,7 +1059,11 @@ details p, details ul { margin: 8px 0; }
   ["targetWake", "anchorBed"].forEach((id) => $(id).addEventListener("input", () => { if ($(id).value) { S[id] = $(id).value; save(); calc(!!state.log[day]); } }));
   ["bath", "books", "settle"].forEach((id) => $(id).addEventListener("input", () => { const n = parseInt($(id).value, 10); if (Number.isFinite(n) && n >= 0) { S[id] = n; save(); calc(!!state.log[day]); } }));
   $("needH").addEventListener("input", () => { const h = parseFloat($("needH").value); if (Number.isFinite(h) && h >= 10 && h <= 13.5) { S.need = Math.round(h * 60); save(); calc(!!state.log[day]); } });
-  $("adapt").addEventListener("change", () => { S.adapt = $("adapt").checked; save(); calc(!!state.log[day]); });
+  $("nwMinus").addEventListener("click", () => { cur.nightWakes = Math.max(0, (+cur.nightWakes || 0) - 1); if (!cur.nightWakes) cur.nightAwake = 0; calc(true); });
+  $("nwPlus").addEventListener("click", () => { cur.nightWakes = Math.min(10, (+cur.nightWakes || 0) + 1); calc(true); });
+  $("nightAwake").addEventListener("input", () => { const n = parseInt($("nightAwake").value, 10); cur.nightAwake = Number.isFinite(n) && n >= 0 ? Math.min(n, 300) : 0; calc(true); });
+  $("stallChip").addEventListener("click", () => { cur.stall = !cur.stall; calc(true); });
+  $("offChip").addEventListener("click", () => { cur.off = !cur.off; calc(true); });
   document.addEventListener("pointerdown", (ev) => { if (!$("chartWrap").contains(ev.target)) $("tip").hidden = true; });
 
   $("exportBtn").addEventListener("click", exportBackup);
