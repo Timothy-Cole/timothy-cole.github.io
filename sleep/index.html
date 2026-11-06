@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bedtime Planner</title>
+<meta name="description" content="Works back from today's wake-up and nap to a suggested bedtime, books time and bath time for a 3-year-old.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f3ef; --surface: #ffffff; --surface-2: #efece6; --text: #1e1c22; --muted: #6a6670; --border: #e1ddd5;
+  --accent: #4b5bb8; --accent-soft: #e6e9f8; --bath: #2f8a8a; --books: #c27a1a; --settle: #7a5bb8; --sleep: #3a4a9e;
+  --warn: #9a5a00; --warn-soft: #fbefd8;
+  --radius: 14px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131318; --surface: #1c1c23; --surface-2: #25252e; --text: #ecebf0; --muted: #a09fab; --border: #33333d;
+    --accent: #9aa7f0; --accent-soft: #232845; --bath: #6cc7c7; --books: #f0b45c; --settle: #b9a0f0; --sleep: #9aa7f0;
+    --warn: #f0c25c; --warn-soft: #362a10; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131318; --surface: #1c1c23; --surface-2: #25252e; --text: #ecebf0; --muted: #a09fab; --border: #33333d;
+  --accent: #9aa7f0; --accent-soft: #232845; --bath: #6cc7c7; --books: #f0b45c; --settle: #b9a0f0; --sleep: #9aa7f0;
+  --warn: #f0c25c; --warn-soft: #362a10; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
+.sub { color: var(--muted); margin: 0 0 20px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+label { display: block; font-weight: 500; margin-bottom: 6px; }
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+input[type="time"], input[type="number"] {
+  font: inherit; font-size: 18px; width: 100%; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+}
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: 10px; padding: 4px; gap: 4px; }
+.seg button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 10px; background: transparent; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.hero { text-align: center; padding: 22px 18px; background: var(--accent-soft); border-color: transparent; }
+.hero .label { font-size: 14px; color: var(--muted); font-weight: 500; }
+.hero .big { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; color: var(--sleep); line-height: 1.1; margin: 4px 0; }
+.hero .why { font-size: 14px; color: var(--text); margin: 8px 0 0; }
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline li { display: grid; grid-template-columns: 14px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.timeline li:last-child { border-bottom: 0; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.t-name { font-weight: 500; }
+.t-dur { display: block; font-size: 13px; color: var(--muted); }
+.t-time { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 14px; }
+.stat { background: var(--surface-2); border-radius: 10px; padding: 10px; text-align: center; }
+.stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.notes { margin: 0; padding: 0; list-style: none; }
+.notes li { background: var(--warn-soft); color: var(--text); border-left: 3px solid var(--warn); border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-top: 10px; }
+.error { color: var(--warn); font-weight: 500; text-align: center; margin: 8px 0 0; }
+details { font-size: 14px; color: var(--muted); }
+details summary { cursor: pointer; font-weight: 500; color: var(--text); }
+details p, details ul { margin: 8px 0; }
+[hidden] { display: none !important; }
+@media (max-width: 380px) { .hero .big { font-size: 40px; } .row3 { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bedtime planner</h1>
+  <p class="sub">Enter today's wake-up and nap to get bath, books and bedtime.</p>
+
+  <section class="card">
+    <h2>Today</h2>
+    <div class="field">
+      <label for="wake">Woke up at</label>
+      <input type="time" id="wake" value="06:30">
+      <div class="hint">Assumes she'll wake at about the same time tomorrow.</div>
+    </div>
+    <div class="field">
+      <label id="napLabel">Did she nap?</label>
+      <div class="seg" role="group" aria-labelledby="napLabel">
+        <button type="button" id="napYes" aria-pressed="true">Yes</button>
+        <button type="button" id="napNo" aria-pressed="false">No</button>
+      </div>
+    </div>
+    <div class="row" id="napTimes">
+      <div class="field">
+        <label for="napStart">Nap start</label>
+        <input type="time" id="napStart" value="12:30">
+      </div>
+      <div class="field">
+        <label for="napEnd">Nap end</label>
+        <input type="time" id="napEnd" value="14:00">
+      </div>
+    </div>
+  </section>
+
+  <section class="card hero" aria-live="polite">
+    <div class="label">Asleep by</div>
+    <div class="big" id="asleepBy">–</div>
+    <p class="why" id="why"></p>
+    <p class="error" id="error" hidden></p>
+  </section>
+
+  <section class="card" id="planCard">
+    <h2>Tonight's routine</h2>
+    <ul class="timeline">
+      <li><span class="dot" style="background:var(--bath)"></span><span class="t-name">Bath starts<span class="t-dur" id="dBath"></span></span><span class="t-time" id="tBath">–</span></li>
+      <li><span class="dot" style="background:var(--books)"></span><span class="t-name">Books start<span class="t-dur" id="dBooks"></span></span><span class="t-time" id="tBooks">–</span></li>
+      <li><span class="dot" style="background:var(--settle)"></span><span class="t-name">Lights out<span class="t-dur" id="dSettle"></span></span><span class="t-time" id="tLights">–</span></li>
+      <li><span class="dot" style="background:var(--sleep)"></span><span class="t-name">Asleep</span><span class="t-time" id="tSleep">–</span></li>
+    </ul>
+    <div class="stats">
+      <div class="stat"><b id="sNight">–</b><span>night sleep</span></div>
+      <div class="stat"><b id="sNap">–</b><span>nap</span></div>
+      <div class="stat"><b id="sTotal">–</b><span>total / 24h</span></div>
+    </div>
+    <ul class="notes" id="notes"></ul>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>Routine lengths</summary>
+      <div class="row3" style="margin-top:12px">
+        <div class="field"><label for="bathMin">Bath (min)</label><input type="number" id="bathMin" min="0" max="90" step="5" value="20"></div>
+        <div class="field"><label for="booksMin">Books (min)</label><input type="number" id="booksMin" min="0" max="90" step="5" value="30"></div>
+        <div class="field"><label for="settleMin">Settle (min)</label><input type="number" id="settleMin" min="0" max="60" step="5" value="15"></div>
+      </div>
+      <div class="hint">Settle is time from lights out until she's asleep. Saved on this device.</div>
+    </details>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>How it works</summary>
+      <p>Bedtime is the <strong>later</strong> of two times:</p>
+      <ul>
+        <li><strong>Sleep need.</strong> A 3-year-old needs about <strong>12 hours</strong> of sleep in 24 hours, naps included. Night sleep is 12h minus the nap, with a minimum of 10h. Bedtime is that far before tomorrow's wake-up. No nap means a full 12h night, so bedtime moves earlier.</li>
+        <li><strong>Time awake after the nap.</strong> At this age a child usually needs about <strong>5 hours awake</strong> after a nap before she can fall asleep. A late nap pushes bedtime back even if it was short.</li>
+      </ul>
+      <p>Bedtime is never set before 6:00pm. Times are rounded to the nearest 5 minutes.</p>
+      <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. The 5-hour awake time is common advice from sleep consultants, not an official guideline. This is a guide only. Your child's own cues come first.</p>
+    </details>
+  </section>
+</div>
+
+<script>
+(function () {
+  const TOTAL_NEED = 12 * 60;      // minutes per 24h, naps included
+  const MIN_NIGHT = 10 * 60;       // never plan less than this overnight
+  const WAKE_WINDOW = 5 * 60;      // awake time needed after nap ends
+  const EARLIEST_BED = 18 * 60;    // 6:00pm floor
+  const LATE_BED = 20 * 60 + 30;   // flag anything after 8:30pm
+  const NAP_CAP = 90;              // daycare cap
+  const LATE_NAP_END = 15 * 60 + 30;
+
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  let napped = true;
+
+  const toMin = (v) => { if (!v) return null; const [h, m] = v.split(":").map(Number); return h * 60 + m; };
+  const round5 = (m) => Math.round(m / 5) * 5;
+  const fmt = (m) => {
+    m = ((m % 1440) + 1440) % 1440;
+    let h = Math.floor(m / 60), mm = m % 60;
+    const ap = h >= 12 ? "pm" : "am";
+    h = h % 12 || 12;
+    return h + ":" + String(mm).padStart(2, "0") + ap;
+  };
+  const dur = (m) => {
+    const h = Math.floor(m / 60), mm = m % 60;
+    return h ? (mm ? `${h}h ${mm}m` : `${h}h`) : `${mm}m`;
+  };
+  const num = (id, fallback) => { const n = parseInt($(id).value, 10); return Number.isFinite(n) && n >= 0 ? n : fallback; };
+
+  function setNap(v) {
+    napped = v;
+    $("napYes").setAttribute("aria-pressed", String(v));
+    $("napNo").setAttribute("aria-pressed", String(!v));
+    $("napTimes").hidden = !v;
+    calc();
+  }
+
+  function showError(msg) {
+    $("error").textContent = msg; $("error").hidden = false;
+    $("asleepBy").textContent = "–"; $("why").textContent = "";
+    $("planCard").hidden = true;
+  }
+
+  function calc() {
+    ["wake", "napStart", "napEnd", "bathMin", "booksMin", "settleMin"].forEach((id) => store.set("sleep." + id, $(id).value));
+    store.set("sleep.napped", napped ? "1" : "0");
+
+    const wake = toMin($("wake").value);
+    if (wake === null) return showError("Enter a wake-up time.");
+
+    let napLen = 0, napStart = null, napEnd = null;
+    if (napped) {
+      napStart = toMin($("napStart").value);
+      napEnd = toMin($("napEnd").value);
+      if (napStart === null || napEnd === null) return showError("Enter the nap start and end times.");
+      if (napStart <= wake) return showError("The nap start needs to be after wake-up.");
+      if (napEnd <= napStart) return showError("The nap end needs to be after the nap start.");
+      napLen = napEnd - napStart;
+    }
+
+    const tomorrowWake = wake + 1440;
+    const nightNeed = Math.max(MIN_NIGHT, TOTAL_NEED - napLen);
+    const byNeed = tomorrowWake - nightNeed;
+    const byWindow = napped ? napEnd + WAKE_WINDOW : -Infinity;
+
+    let asleep, why;
+    if (byWindow > byNeed) {
+      asleep = byWindow;
+      why = `She needs about 5 hours awake after a nap that ended at ${fmt(napEnd)}. Going by sleep need alone, it would be ${fmt(round5(byNeed))}.`;
+    } else if (napped) {
+      why = `12h of sleep minus a ${dur(napLen)} nap leaves ${dur(nightNeed)} overnight before she wakes at ${fmt(wake)}.`;
+      asleep = byNeed;
+    } else {
+      why = `No nap today, so she gets a full ${dur(nightNeed)} night before she wakes at ${fmt(wake)}.`;
+      asleep = byNeed;
+    }
+    asleep = round5(asleep);
+
+    const notes = [];
+    if (asleep < EARLIEST_BED) {
+      asleep = EARLIEST_BED;
+      notes.push("Moved to 6:00pm, the earliest bedtime this planner suggests. If she's falling apart, a little earlier is fine.");
+    }
+    if (napped && napLen > NAP_CAP) notes.push(`The nap was ${dur(napLen)}, longer than the 1h 30m cap.`);
+    if (napped && napEnd > LATE_NAP_END) notes.push(`The nap ended after 3:30pm. Late naps push bedtime back more than long ones, so try to have her up by about 3pm.`);
+    if (asleep > LATE_BED) notes.push("That's a late bedtime for a 3-year-old. Expect her to be tired tomorrow, and keep the nap earlier.");
+
+    const settle = num("settleMin", 15), books = num("booksMin", 30), bath = num("bathMin", 20);
+    const lights = asleep - settle, booksStart = lights - books, bathStart = booksStart - bath;
+
+    $("error").hidden = true; $("planCard").hidden = false;
+    $("asleepBy").textContent = fmt(asleep);
+    $("why").textContent = why;
+    $("tBath").textContent = fmt(bathStart);   $("dBath").textContent = `${bath} min`;
+    $("tBooks").textContent = fmt(booksStart); $("dBooks").textContent = `${books} min`;
+    $("tLights").textContent = fmt(lights);    $("dSettle").textContent = `${settle} min to settle`;
+    $("tSleep").textContent = fmt(asleep);
+
+    const night = tomorrowWake - asleep;
+    $("sNight").textContent = dur(night);
+    $("sNap").textContent = napped ? dur(napLen) : "None";
+    $("sTotal").textContent = dur(night + napLen);
+
+    $("notes").innerHTML = "";
+    notes.forEach((n) => { const li = document.createElement("li"); li.textContent = n; $("notes").appendChild(li); });
+  }
+
+  // restore saved values
+  ["wake", "napStart", "napEnd", "bathMin", "booksMin", "settleMin"].forEach((id) => {
+    const v = store.get("sleep." + id); if (v) $(id).value = v;
+  });
+  napped = store.get("sleep.napped") !== "0";
+
+  $("napYes").addEventListener("click", () => setNap(true));
+  $("napNo").addEventListener("click", () => setNap(false));
+  ["wake", "napStart", "napEnd", "bathMin", "booksMin", "settleMin"].forEach((id) => $(id).addEventListener("input", calc));
+  setNap(napped);
+})();
+</script>
+</body>
+</html>
