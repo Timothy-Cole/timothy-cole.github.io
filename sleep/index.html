@@ -42,14 +42,17 @@ label, .flabel { display: block; font-weight: 500; margin-bottom: 6px; }
 .field { margin-bottom: 14px; min-width: 0; }
 .field:last-child { margin-bottom: 0; }
 input[type="time"], input[type="number"] {
-  font: inherit; font-size: 18px; width: 100%; min-width: 0; padding: 10px 12px; border-radius: 10px;
+  font: inherit; font-size: 18px; width: 100%; min-width: 0; max-width: 100%; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  -webkit-appearance: none; appearance: none; display: block; min-height: 46px; text-align: left;
 }
+input[type="time"]::-webkit-date-and-time-value { text-align: left; }
+.tin > *, .row > *, .row3 > *, .act > * { min-width: 0; }
 .tin { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .btn { font: inherit; font-weight: 600; font-size: 14px; border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--surface); color: var(--text); cursor: pointer; }
 .btn:active { transform: translateY(1px); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
 .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--surface-2); border-radius: 10px; padding: 4px; gap: 4px; }
 .seg button { font: inherit; font-weight: 600; font-size: 15px; border: 0; border-radius: 8px; padding: 10px 4px; background: transparent; color: var(--muted); cursor: pointer; }
@@ -128,7 +131,7 @@ input[type="time"], input[type="number"] {
 .log .act { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 6px 10px; align-items: center; font-size: 14px; }
 .log .act input { font-size: 15px; padding: 6px 8px; }
 .log .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.pill { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); white-space: nowrap; }
+.pill { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 8px; background: var(--surface-2); }
 .pill.late { background: var(--warn-soft); color: var(--warn); }
 .empty { color: var(--muted); font-size: 14px; margin: 0; }
 details { font-size: 14px; color: var(--muted); }
@@ -574,9 +577,13 @@ details p, details ul { margin: 8px 0; }
       if (k === day && !e.actual) continue;   // tonight isn't over yet
       if (p.counted + p.lateN + p.offN >= 14) break;
       if (e.off) { p.offN++; continue; }
-      if (isLate(e)) { p.lateN++; continue; }
-      p.counted++;
       const st = settleOf(e);
+      if (isLate(e)) {   // late nights don't judge bedtime, but how long she took to settle still counts
+        p.lateN++;
+        if (st !== null) { p.settles.push(st); (e.napMode === "no" ? p.noNapSet : p.napSet).push(st); }
+        continue;
+      }
+      p.counted++;
       if (st !== null) {
         p.settles.push(st); (e.napMode === "no" ? p.noNapSet : p.napSet).push(st);
         if (st >= LONG_SETTLE) { p.longN++; if (e.stall) p.longStallN++; }
@@ -899,7 +906,7 @@ details p, details ul { margin: 8px 0; }
 
     const tParts = cur.off ? ["Off night: not used for learning."] : [];
     const lb = lateBy(cur), st = settleOf(cur);
-    if (lb !== null) tParts.push(lb >= LATE_LIGHTS ? `Lights out ${dur(lb)} late, so tonight won't be used for learning.` : lb <= -5 ? `Lights out ${dur(lb)} early.` : "Lights out on time.");
+    if (lb !== null) tParts.push(lb >= LATE_LIGHTS ? `Lights out ${dur(lb)} after the planned ${fmt(plannedLightsOf(cur))}, so tonight won't be used to judge bedtime. Her settle time still counts.` : lb <= -5 ? `Lights out ${dur(lb)} early.` : "Lights out on time.");
     if (st !== null) tParts.push(`Settled in ${dur(st)}${st > 20 ? " (15–20 min is ideal)" : ""}.`);
     $("tonightSummary").textContent = tParts.length ? tParts.join(" ") : "Logging both each night lets the planner learn her patterns.";
 
@@ -991,7 +998,8 @@ details p, details ul { margin: 8px 0; }
       if (Math.abs(hv - (+S.need || 720)) >= 20) button(`Use ${dur(hv)} as her sleep need (now ${dur(+S.need || 720)})`, () => { S.need = hv; save(); syncInputs(); calc(!!state.log[day]); });
     }
     if (!state.trial) renderLateness(body, para, button);
-    if (p.lateN || p.offN) para(`Left out: ${[p.lateN ? `${p.lateN} late` : "", p.offN ? `${p.offN} sick or off` : ""].filter(Boolean).join(", ")} ${p.lateN + p.offN === 1 ? "night" : "nights"}.`, "muted");
+    if (p.lateN) para(`${p.lateN} late ${p.lateN === 1 ? "night" : "nights"} not used to judge bedtime (settle times still count).`, "muted");
+    if (p.offN) para(`${p.offN} sick or off ${p.offN === 1 ? "night" : "nights"} left out.`, "muted");
   }
 
   // ---------- chart: lights out → asleep per night, planned asleep as a dash ----------
@@ -1076,7 +1084,8 @@ details p, details ul { margin: 8px 0; }
       if (e.wake) parts.push("Woke " + fmt(toMin(e.wake)) + (e.mood ? `, ${e.mood}` : ""));
       if (e.napMode === "no") parts.push("No nap");
       else if (e.napStart && e.napEnd && e.napMode === "yes") parts.push(`Nap ${fmt(toMin(e.napStart))}–${fmt(toMin(e.napEnd))}`);
-      if (typeof e.planned === "number") parts.push("Planned " + fmt(e.planned));
+      const pl = plannedLightsOf(e);
+      if (typeof e.planned === "number") parts.push(`Planned lights out ${pl !== null ? fmt(pl) : "–"}, asleep ${fmt(e.planned)}`);
       const nx = morningAfter(k), a = eveMin(e.actual), w = nx ? toMin(nx.wake) : null;
       const ni = nightInfo(k);
       if (a !== null && w !== null) parts.push("Night " + dur(w + 1440 - a - ni.awake));
@@ -1093,7 +1102,7 @@ details p, details ul { margin: 8px 0; }
       const pills = el("div", "pills");
       const lb = lateBy(e), st = settleOf(e), dr = driftOf(e);
       if (e.off) pills.append(el("span", "pill late", "Sick or off night, not counted"));
-      else if (lb !== null && lb >= LATE_LIGHTS) pills.append(el("span", "pill late", `Lights out ${dur(lb)} late, not counted`));
+      else if (lb !== null && lb >= LATE_LIGHTS) pills.append(el("span", "pill late", `Lights out ${dur(lb)} after plan: not used to judge bedtime`));
       else if (dr !== null) pills.append(el("span", "pill", signed(dr) + " vs plan"));
       if (st !== null) pills.append(el("span", "pill", `Settled in ${dur(st)}`));
       if (e.stall) pills.append(el("span", "pill", "Stalling"));
