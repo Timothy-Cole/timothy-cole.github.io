@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bedtime Planner</title>
-<meta name="description" content="Works back from today's wake-up and nap to a suggested bedtime, books time and bath time for a 3-year-old.">
+<meta name="description" content="Works back from today's wake-up and nap to a suggested bedtime, books time and bath time for a 3-year-old, and learns from her sleep log.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,20 +12,20 @@
 :root {
   --bg: #f5f3ef; --surface: #ffffff; --surface-2: #efece6; --text: #1e1c22; --muted: #6a6670; --border: #e1ddd5;
   --accent: #4b5bb8; --accent-soft: #e6e9f8; --bath: #2f8a8a; --books: #c27a1a; --settle: #7a5bb8; --sleep: #3a4a9e;
-  --warn: #9a5a00; --warn-soft: #fbefd8;
+  --warn: #9a5a00; --warn-soft: #fbefd8; --good: #1f7a4d; --good-soft: #e3f3ea;
   --radius: 14px; color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #131318; --surface: #1c1c23; --surface-2: #25252e; --text: #ecebf0; --muted: #a09fab; --border: #33333d;
     --accent: #9aa7f0; --accent-soft: #232845; --bath: #6cc7c7; --books: #f0b45c; --settle: #b9a0f0; --sleep: #9aa7f0;
-    --warn: #f0c25c; --warn-soft: #362a10; color-scheme: dark;
+    --warn: #f0c25c; --warn-soft: #362a10; --good: #5cc48f; --good-soft: #15301f; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #131318; --surface: #1c1c23; --surface-2: #25252e; --text: #ecebf0; --muted: #a09fab; --border: #33333d;
   --accent: #9aa7f0; --accent-soft: #232845; --bath: #6cc7c7; --books: #f0b45c; --settle: #b9a0f0; --sleep: #9aa7f0;
-  --warn: #f0c25c; --warn-soft: #362a10; color-scheme: dark;
+  --warn: #f0c25c; --warn-soft: #362a10; --good: #5cc48f; --good-soft: #15301f; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -36,22 +36,40 @@ h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
 .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
 label { display: block; font-weight: 500; margin-bottom: 6px; }
-.field { margin-bottom: 14px; }
+.field { margin-bottom: 14px; min-width: 0; }
 .field:last-child { margin-bottom: 0; }
 input[type="time"], input[type="number"] {
-  font: inherit; font-size: 18px; width: 100%; padding: 10px 12px; border-radius: 10px;
+  font: inherit; font-size: 18px; width: 100%; min-width: 0; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
 }
+.tin { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.btn { font: inherit; font-weight: 600; font-size: 14px; border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--surface); color: var(--text); cursor: pointer; }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: 10px; padding: 4px; gap: 4px; }
-.seg button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 10px; background: transparent; color: var(--muted); cursor: pointer; }
+.seg { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--surface-2); border-radius: 10px; padding: 4px; gap: 4px; }
+.seg button { font: inherit; font-weight: 600; font-size: 15px; border: 0; border-radius: 8px; padding: 10px 4px; background: transparent; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.wakeby { background: var(--warn-soft); border-radius: 10px; padding: 12px 14px; margin-top: 4px; }
+.wakeby .lbl { font-size: 13px; color: var(--muted); }
+.wakeby .val { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--warn); line-height: 1.2; }
+.wakeby p { margin: 4px 0 10px; font-size: 14px; }
 .hero { text-align: center; padding: 22px 18px; background: var(--accent-soft); border-color: transparent; }
 .hero .label { font-size: 14px; color: var(--muted); font-weight: 500; }
 .hero .big { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; color: var(--sleep); line-height: 1.1; margin: 4px 0; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hero .big { font-size: 38px; }
+.hero .big.lo { color: var(--settle); }
 .hero .why { font-size: 14px; color: var(--text); margin: 8px 0 0; }
+.countdown { display: inline-block; margin-top: 12px; padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 15px; background: var(--surface); color: var(--text); }
+.countdown.soon { background: var(--warn-soft); color: var(--warn); }
+.countdown.now { background: var(--good-soft); color: var(--good); }
+.nudge { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.nudge .btn { background: var(--surface); }
+.nudge-state { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.linkbtn { font: inherit; font-size: 13px; background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
 .timeline { list-style: none; margin: 0; padding: 0; }
 .timeline li { display: grid; grid-template-columns: 14px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .timeline li:last-child { border-bottom: 0; }
@@ -65,12 +83,28 @@ input[type="time"], input[type="number"] {
 .stat span { font-size: 12px; color: var(--muted); }
 .notes { margin: 0; padding: 0; list-style: none; }
 .notes li { background: var(--warn-soft); color: var(--text); border-left: 3px solid var(--warn); border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-top: 10px; }
+.actual { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 .error { color: var(--warn); font-weight: 500; text-align: center; margin: 8px 0 0; }
+.pat p { margin: 0 0 8px; font-size: 15px; }
+.pat .muted { color: var(--muted); font-size: 14px; }
+.switch { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-weight: 500; cursor: pointer; }
+.switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+.log { list-style: none; margin: 0; padding: 0; }
+.log li { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.log li:last-child { border-bottom: 0; }
+.log .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.log .date { font-weight: 600; }
+.log .del { font: inherit; font-size: 13px; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 4px; }
+.log .meta { font-size: 13px; color: var(--muted); margin: 2px 0 8px; }
+.log .act { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 14px; }
+.log .act input { font-size: 15px; padding: 6px 8px; }
+.pill { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); white-space: nowrap; }
+.empty { color: var(--muted); font-size: 14px; margin: 0; }
 details { font-size: 14px; color: var(--muted); }
 details summary { cursor: pointer; font-weight: 500; color: var(--text); }
 details p, details ul { margin: 8px 0; }
 [hidden] { display: none !important; }
-@media (max-width: 380px) { .hero .big { font-size: 40px; } .row3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
 </head>
 <body>
@@ -82,33 +116,48 @@ details p, details ul { margin: 8px 0; }
     <h2>Today</h2>
     <div class="field">
       <label for="wake">Woke up at</label>
-      <input type="time" id="wake" value="06:30">
-      <div class="hint">Assumes she'll wake at about the same time tomorrow.</div>
+      <div class="tin"><input type="time" id="wake"><button type="button" class="btn" data-now="wake">Now</button></div>
+      <div class="hint" id="wakeHint"></div>
     </div>
     <div class="field">
-      <label id="napLabel">Did she nap?</label>
+      <label id="napLabel">Nap</label>
       <div class="seg" role="group" aria-labelledby="napLabel">
-        <button type="button" id="napYes" aria-pressed="true">Yes</button>
-        <button type="button" id="napNo" aria-pressed="false">No</button>
+        <button type="button" data-nap="yes">Napped</button>
+        <button type="button" data-nap="now">Napping now</button>
+        <button type="button" data-nap="no">No nap</button>
       </div>
     </div>
-    <div class="row" id="napTimes">
+    <div id="napTimes">
       <div class="field">
         <label for="napStart">Nap start</label>
-        <input type="time" id="napStart" value="12:30">
+        <div class="tin"><input type="time" id="napStart"><button type="button" class="btn" data-now="napStart">Now</button></div>
       </div>
-      <div class="field">
+      <div class="field" id="napEndField">
         <label for="napEnd">Nap end</label>
-        <input type="time" id="napEnd" value="14:00">
+        <div class="tin"><input type="time" id="napEnd"><button type="button" class="btn" data-now="napEnd">Now</button></div>
       </div>
+    </div>
+    <div class="wakeby" id="wakeBy" hidden>
+      <div class="lbl">Wake her by</div>
+      <div class="val" id="wakeByTime">–</div>
+      <p id="wakeByWhy"></p>
+      <button type="button" class="btn primary" id="sheIsUp">She's up now</button>
     </div>
   </section>
 
   <section class="card hero" aria-live="polite">
-    <div class="label">Asleep by</div>
-    <div class="big" id="asleepBy">–</div>
+    <div class="pair">
+      <div><div class="label">Lights out</div><div class="big lo" id="lightsOut">–</div></div>
+      <div><div class="label">Asleep by</div><div class="big" id="asleepBy">–</div></div>
+    </div>
     <p class="why" id="why"></p>
     <p class="error" id="error" hidden></p>
+    <div id="countdown" class="countdown" hidden></div>
+    <div class="nudge" id="nudgeBtns">
+      <button type="button" class="btn" id="tired">Tired: 15 min earlier</button>
+      <button type="button" class="btn" id="wired">Wired: 15 min later</button>
+    </div>
+    <div class="nudge-state" id="nudgeState" hidden></div>
   </section>
 
   <section class="card" id="planCard">
@@ -125,17 +174,39 @@ details p, details ul { margin: 8px 0; }
       <div class="stat"><b id="sTotal">–</b><span>total / 24h</span></div>
     </div>
     <ul class="notes" id="notes"></ul>
+    <div class="actual field">
+      <label for="actual">She actually fell asleep at</label>
+      <div class="tin"><input type="time" id="actual"><button type="button" class="btn" data-now="actual">Now</button></div>
+      <div class="hint">Logging this each night lets the planner learn her patterns.</div>
+    </div>
+  </section>
+
+  <section class="card pat">
+    <h2>Her patterns</h2>
+    <div id="patBody"></div>
+    <label class="switch"><input type="checkbox" id="adapt"> Adjust the plan to her</label>
+    <div class="hint" id="adaptHint"></div>
+  </section>
+
+  <section class="card">
+    <h2>Sleep log</h2>
+    <ul class="log" id="log"></ul>
+    <div class="hint">Saved on this phone only.</div>
   </section>
 
   <section class="card">
     <details>
-      <summary>Routine lengths</summary>
-      <div class="row3" style="margin-top:12px">
-        <div class="field"><label for="bathMin">Bath (min)</label><input type="number" id="bathMin" min="0" max="90" step="5" value="20"></div>
-        <div class="field"><label for="booksMin">Books (min)</label><input type="number" id="booksMin" min="0" max="90" step="5" value="30"></div>
-        <div class="field"><label for="settleMin">Settle (min)</label><input type="number" id="settleMin" min="0" max="60" step="5" value="15"></div>
+      <summary>Settings</summary>
+      <div class="row" style="margin-top:12px">
+        <div class="field"><label for="targetWake">Wake-up target</label><input type="time" id="targetWake"></div>
+        <div class="field"><label for="latestBed">Latest bedtime</label><input type="time" id="latestBed"></div>
       </div>
-      <div class="hint">Settle is time from lights out until she's asleep. Saved on this device.</div>
+      <div class="row3">
+        <div class="field"><label for="bath">Bath (min)</label><input type="number" id="bath" min="0" max="90" step="5"></div>
+        <div class="field"><label for="books">Books (min)</label><input type="number" id="books" min="0" max="90" step="5"></div>
+        <div class="field"><label for="settle">Settle (min)</label><input type="number" id="settle" min="0" max="60" step="5"></div>
+      </div>
+      <div class="hint">Latest bedtime is used to work out when to wake her from a nap. Settle is the time from lights out until she's asleep.</div>
     </details>
   </section>
 
@@ -144,9 +215,11 @@ details p, details ul { margin: 8px 0; }
       <summary>How it works</summary>
       <p>Bedtime is the <strong>later</strong> of two times:</p>
       <ul>
-        <li><strong>Sleep need.</strong> A 3-year-old needs about <strong>12 hours</strong> of sleep in 24 hours, naps included. Night sleep is 12h minus the nap, with a minimum of 10h. Bedtime is that far before tomorrow's wake-up. No nap means a full 12h night, so bedtime moves earlier.</li>
+        <li><strong>Sleep need.</strong> A 3-year-old needs about <strong>12 hours</strong> of sleep in 24 hours, naps included. Night sleep is 12h minus the nap, with a minimum of 10h, counted back from the wake-up target. No nap means a full 12h night, so bedtime moves earlier.</li>
         <li><strong>Time awake after the nap.</strong> At this age a child usually needs about <strong>5 hours awake</strong> after a nap before she can fall asleep. A late nap pushes bedtime back even if it was short.</li>
       </ul>
+      <p><strong>Wake her by</strong> is the earliest of three times: the 1h 30m nap cap, 5 hours before your latest bedtime, or the point where more nap would push bedtime past your latest bedtime.</p>
+      <p><strong>Adjusting to her.</strong> Once you've logged 5 nights, the planner compares when she actually fell asleep with the plan, using the middle value of her last two weeks. Regularly falling asleep later than planned usually means bedtime is a little early for her. Regularly falling asleep earlier usually means it's a little late. With the switch on, the plan shifts by 10–30 minutes to match. Nap days and no-nap days are counted separately once each has 3 nights.</p>
       <p>Bedtime is never set before 6:00pm. Times are rounded to the nearest 5 minutes.</p>
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. The 5-hour awake time is common advice from sleep consultants, not an official guideline. This is a guide only. Your child's own cues come first.</p>
     </details>
@@ -162,118 +235,326 @@ details p, details ul { margin: 8px 0; }
   const LATE_BED = 20 * 60 + 30;   // flag anything after 8:30pm
   const NAP_CAP = 90;              // daycare cap
   const LATE_NAP_END = 15 * 60 + 30;
+  const MIN_NIGHTS = 5;            // logged nights before patterns kick in
+  const KEY = "sleep.v2";
 
   const $ = (id) => document.getElementById(id);
-  const store = {
-    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  };
 
-  let napped = true;
-
-  const toMin = (v) => { if (!v) return null; const [h, m] = v.split(":").map(Number); return h * 60 + m; };
+  // ---------- time helpers ----------
+  const toMin = (v) => { if (!v) return null; const [h, m] = v.split(":").map(Number); return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null; };
+  const eveMin = (v) => { const m = toMin(v); return m === null ? null : (m < 12 * 60 ? m + 1440 : m); }; // after-midnight sleep times
   const round5 = (m) => Math.round(m / 5) * 5;
+  const pad = (n) => String(n).padStart(2, "0");
   const fmt = (m) => {
     m = ((m % 1440) + 1440) % 1440;
-    let h = Math.floor(m / 60), mm = m % 60;
+    let h = Math.floor(m / 60); const mm = m % 60;
     const ap = h >= 12 ? "pm" : "am";
     h = h % 12 || 12;
-    return h + ":" + String(mm).padStart(2, "0") + ap;
+    return h + ":" + pad(mm) + ap;
   };
-  const dur = (m) => {
-    const h = Math.floor(m / 60), mm = m % 60;
-    return h ? (mm ? `${h}h ${mm}m` : `${h}h`) : `${mm}m`;
-  };
-  const num = (id, fallback) => { const n = parseInt($(id).value, 10); return Number.isFinite(n) && n >= 0 ? n : fallback; };
+  const dur = (m) => { m = Math.round(Math.abs(m)); const h = Math.floor(m / 60), mm = m % 60; return h ? (mm ? `${h}h ${mm}m` : `${h}h`) : `${mm}m`; };
+  const signed = (m) => (m > 0 ? "+" : m < 0 ? "−" : "±") + dur(m);
+  const nowHHMM = () => { const d = new Date(); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+  const dkey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+  const nextKey = (k) => { const d = parseKey(k); d.setDate(d.getDate() + 1); return dkey(d); };
+  const dayLabel = (k) => parseKey(k).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+  // The "day" runs 4am to 4am, so logging a late fall-asleep time still lands on the right night.
+  const activeDay = () => { const d = new Date(); if (d.getHours() < 4) d.setDate(d.getDate() - 1); return dkey(d); };
+  const nowEve = () => { const d = new Date(); const m = d.getHours() * 60 + d.getMinutes(); return d.getHours() < 4 ? m + 1440 : m; };
+  const median = (a) => { const s = [...a].sort((x, y) => x - y); const n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
 
-  function setNap(v) {
-    napped = v;
-    $("napYes").setAttribute("aria-pressed", String(v));
-    $("napNo").setAttribute("aria-pressed", String(!v));
-    $("napTimes").hidden = !v;
-    calc();
+  // ---------- storage ----------
+  function load() {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+    if (!s || typeof s !== "object") s = {};
+    s.settings = Object.assign({ targetWake: "06:45", latestBed: "20:00", bath: 20, books: 30, settle: 30, adapt: false }, s.settings || {});
+    s.log = s.log && typeof s.log === "object" ? s.log : {};
+    if (!s.migrated) {
+      const old = (k) => { try { return localStorage.getItem("sleep." + k); } catch (e) { return null; } };
+      const b = old("bathMin"), bk = old("booksMin"), st = old("settleMin");
+      if (b) s.settings.bath = +b; if (bk) s.settings.books = +bk; if (st) s.settings.settle = +st;
+      s.migrated = true;
+    }
+    if (!s.settle30) { if (+s.settings.settle === 15) s.settings.settle = 30; s.settle30 = true; }
+    return s;
   }
+  const state = load();
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+  const S = state.settings;
 
-  function showError(msg) {
-    $("error").textContent = msg; $("error").hidden = false;
-    $("asleepBy").textContent = "–"; $("why").textContent = "";
-    $("planCard").hidden = true;
+  const day = activeDay();
+  let cur = state.log[day] ? Object.assign({}, state.log[day]) : draft();
+  function draft() {
+    const keys = Object.keys(state.log).sort();
+    const last = keys.length ? state.log[keys[keys.length - 1]] : null;
+    return { wake: S.targetWake, napMode: "yes", napStart: (last && last.napStart) || "12:30", napEnd: (last && last.napEnd) || "14:00", nudge: 0, actual: "" };
   }
+  const commit = () => { state.log[day] = Object.assign({}, cur); save(); };
 
-  function calc() {
-    ["wake", "napStart", "napEnd", "bathMin", "booksMin", "settleMin"].forEach((id) => store.set("sleep." + id, $(id).value));
-    store.set("sleep.napped", napped ? "1" : "0");
+  // ---------- the model ----------
+  function model(e) {
+    const wake = toMin(e.wake);
+    if (wake === null) return { error: "Enter a wake-up time." };
+    const tW = toMin(S.targetWake) + 1440;
+    const latestBed = toMin(S.latestBed);
+    const notes = [];
+    let napLen = 0, napStart = null, napEnd = null, wakeBy = null, wakeByWhy = "";
 
-    const wake = toMin($("wake").value);
-    if (wake === null) return showError("Enter a wake-up time.");
-
-    let napLen = 0, napStart = null, napEnd = null;
-    if (napped) {
-      napStart = toMin($("napStart").value);
-      napEnd = toMin($("napEnd").value);
-      if (napStart === null || napEnd === null) return showError("Enter the nap start and end times.");
-      if (napStart <= wake) return showError("The nap start needs to be after wake-up.");
-      if (napEnd <= napStart) return showError("The nap end needs to be after the nap start.");
+    if (e.napMode !== "no") {
+      napStart = toMin(e.napStart);
+      if (napStart === null) return { error: "Enter when the nap started." };
+      if (napStart <= wake) return { error: "The nap start needs to be after wake-up." };
+      if (e.napMode === "now") {
+        const byCap = napStart + NAP_CAP;
+        const byWindow = latestBed - WAKE_WINDOW;
+        const byNeed = napStart + latestBed - tW + TOTAL_NEED;
+        wakeBy = Math.floor(Math.min(byCap, byWindow, byNeed) / 5) * 5;
+        if (wakeBy === Math.floor(byCap / 5) * 5) wakeByWhy = "That's the 1h 30m nap cap.";
+        else if (byWindow <= byNeed) wakeByWhy = `She needs about 5 hours awake before a ${fmt(latestBed)} bedtime.`;
+        else wakeByWhy = `Any longer and bedtime goes past ${fmt(latestBed)} for a ${fmt(tW)} wake-up.`;
+        if (wakeBy < napStart + 20) { wakeBy = napStart + 20; wakeByWhy = "This nap started late, so keep it to about 20 minutes. Bedtime will still run a bit late."; }
+        napEnd = wakeBy;
+      } else {
+        napEnd = toMin(e.napEnd);
+        if (napEnd === null) return { error: "Enter when the nap ended." };
+        if (napEnd <= napStart) return { error: "The nap end needs to be after the nap start." };
+      }
       napLen = napEnd - napStart;
     }
 
-    const tomorrowWake = wake + 1440;
     const nightNeed = Math.max(MIN_NIGHT, TOTAL_NEED - napLen);
-    const byNeed = tomorrowWake - nightNeed;
-    const byWindow = napped ? napEnd + WAKE_WINDOW : -Infinity;
+    const byNeed = tW - nightNeed;
+    const byWindow = napStart !== null ? napEnd + WAKE_WINDOW : -Infinity;
+    const napWord = e.napMode === "now" ? "a nap to " + fmt(napEnd) : `a ${dur(napLen)} nap`;
 
-    let asleep, why;
+    let base, why;
     if (byWindow > byNeed) {
-      asleep = byWindow;
-      why = `She needs about 5 hours awake after a nap that ended at ${fmt(napEnd)}. Going by sleep need alone, it would be ${fmt(round5(byNeed))}.`;
-    } else if (napped) {
-      why = `12h of sleep minus a ${dur(napLen)} nap leaves ${dur(nightNeed)} overnight before she wakes at ${fmt(wake)}.`;
-      asleep = byNeed;
+      base = byWindow;
+      why = `She needs about 5 hours awake after a nap ending at ${fmt(napEnd)}. Going by sleep need alone, it would be ${fmt(round5(byNeed))}.`;
+    } else if (napStart !== null) {
+      base = byNeed;
+      why = `12h of sleep minus ${napWord} leaves ${dur(nightNeed)} overnight before a ${fmt(tW)} wake-up.`;
     } else {
-      why = `No nap today, so she gets a full ${dur(nightNeed)} night before she wakes at ${fmt(wake)}.`;
-      asleep = byNeed;
+      base = byNeed;
+      why = `No nap today, so she gets a full ${dur(nightNeed)} night before a ${fmt(tW)} wake-up.`;
     }
-    asleep = round5(asleep);
-
-    const notes = [];
-    if (asleep < EARLIEST_BED) {
-      asleep = EARLIEST_BED;
+    base = round5(base);
+    if (base < EARLIEST_BED) {
+      base = EARLIEST_BED;
       notes.push("Moved to 6:00pm, the earliest bedtime this planner suggests. If she's falling apart, a little earlier is fine.");
     }
-    if (napped && napLen > NAP_CAP) notes.push(`The nap was ${dur(napLen)}, longer than the 1h 30m cap.`);
-    if (napped && napEnd > LATE_NAP_END) notes.push(`The nap ended after 3:30pm. Late naps push bedtime back more than long ones, so try to have her up by about 3pm.`);
-    if (asleep > LATE_BED) notes.push("That's a late bedtime for a 3-year-old. Expect her to be tired tomorrow, and keep the nap earlier.");
+    if (e.napMode === "yes" && napLen > NAP_CAP) notes.push(`The nap was ${dur(napLen)}, longer than the 1h 30m cap.`);
+    if (e.napMode === "yes" && napEnd > LATE_NAP_END) notes.push("The nap ended after 3:30pm. Late naps push bedtime back more than long ones, so try to have her up by about 3pm.");
+    return { base, why, notes, napLen, napped: napStart !== null, tW, wakeBy, wakeByWhy };
+  }
 
-    const settle = num("settleMin", 15), books = num("booksMin", 30), bath = num("bathMin", 20);
+  // ---------- patterns ----------
+  function patterns() {
+    const keys = Object.keys(state.log).sort().reverse();
+    const rows = [], nights = [];
+    for (const k of keys) {
+      const e = state.log[k];
+      const a = eveMin(e.actual);
+      if (a === null || typeof e.base !== "number") continue;
+      if (rows.length < 14) rows.push({ napped: e.napMode !== "no", drift: a - (e.base + (e.nudge || 0)) });
+      const nx = state.log[nextKey(k)];
+      if (nx && toMin(nx.wake) !== null && nights.length < 14) nights.push(toMin(nx.wake) + 1440 - a);
+    }
+    const nap = rows.filter((r) => r.napped).map((r) => r.drift);
+    const noNap = rows.filter((r) => !r.napped).map((r) => r.drift);
+    return {
+      n: rows.length,
+      all: rows.length ? median(rows.map((r) => r.drift)) : 0,
+      nap: nap.length >= 3 ? median(nap) : null,
+      noNap: noNap.length >= 3 ? median(noNap) : null,
+      night: nights.length ? nights.reduce((x, y) => x + y, 0) / nights.length : null
+    };
+  }
+  const offsetFrom = (m) => (Math.abs(m) < 10 ? 0 : Math.max(-30, Math.min(30, round5(m))));
+  function learnedOffset(napped, p) {
+    if (!S.adapt || p.n < MIN_NIGHTS) return 0;
+    const g = napped ? p.nap : p.noNap;
+    return offsetFrom(g !== null ? g : p.all);
+  }
+
+  // ---------- rendering ----------
+  let plan = null;
+
+  function syncInputs() {
+    $("wake").value = cur.wake || "";
+    $("napStart").value = cur.napStart || "";
+    $("napEnd").value = cur.napEnd || "";
+    $("actual").value = cur.actual || "";
+    ["targetWake", "latestBed", "bath", "books", "settle"].forEach((id) => { $(id).value = S[id]; });
+    $("adapt").checked = !!S.adapt;
+  }
+
+  function showError(msg) {
+    plan = null;
+    $("error").textContent = msg; $("error").hidden = false;
+    $("asleepBy").textContent = "–"; $("lightsOut").textContent = "–"; $("why").textContent = "";
+    $("planCard").hidden = true; $("countdown").hidden = true; $("nudgeBtns").hidden = true; $("nudgeState").hidden = true;
+    $("wakeBy").hidden = true;
+  }
+
+  function calc(persist) {
+    const mode = cur.napMode;
+    document.querySelectorAll("[data-nap]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.nap === mode)));
+    $("napTimes").hidden = mode === "no";
+    $("napEndField").hidden = mode === "now";
+    $("wakeHint").textContent = `Planning for a ${fmt(toMin(S.targetWake))} wake-up tomorrow. You can change this in Settings.`;
+
+    const r = model(cur);
+    if (r.error) { showError(r.error); renderSide(); return; }
+
+    const p = patterns();
+    const offset = learnedOffset(r.napped, p);
+    const nudge = cur.nudge || 0;
+    const asleep = r.base + offset + nudge;
+    cur.base = r.base; cur.planned = asleep;
+    if (persist) commit();
+
+    let why = r.why;
+    if (offset) why += ` Moved ${dur(offset)} ${offset > 0 ? "later" : "earlier"} to match her recent nights.`;
+
+    $("wakeBy").hidden = mode !== "now";
+    if (mode === "now") { $("wakeByTime").textContent = fmt(r.wakeBy); $("wakeByWhy").textContent = r.wakeByWhy; }
+
+    const settle = +S.settle || 0, books = +S.books || 0, bath = +S.bath || 0;
     const lights = asleep - settle, booksStart = lights - books, bathStart = booksStart - bath;
+    plan = { bathStart, booksStart, lights, asleep };
 
-    $("error").hidden = true; $("planCard").hidden = false;
+    $("error").hidden = true; $("planCard").hidden = false; $("nudgeBtns").hidden = false;
     $("asleepBy").textContent = fmt(asleep);
-    $("why").textContent = why;
+    $("lightsOut").textContent = fmt(lights);
+    $("why").textContent = why + ` Lights out ${settle} min before, so she has time to settle.`;
+    $("nudgeState").hidden = !nudge;
+    if (nudge) {
+      $("nudgeState").textContent = "";
+      $("nudgeState").append(`Tonight moved ${dur(nudge)} ${nudge < 0 ? "earlier" : "later"}. `);
+      const u = document.createElement("button"); u.className = "linkbtn"; u.textContent = "Reset";
+      u.onclick = () => { cur.nudge = 0; calc(true); };
+      $("nudgeState").append(u);
+    }
+
     $("tBath").textContent = fmt(bathStart);   $("dBath").textContent = `${bath} min`;
     $("tBooks").textContent = fmt(booksStart); $("dBooks").textContent = `${books} min`;
     $("tLights").textContent = fmt(lights);    $("dSettle").textContent = `${settle} min to settle`;
     $("tSleep").textContent = fmt(asleep);
 
-    const night = tomorrowWake - asleep;
+    const night = r.tW - asleep;
     $("sNight").textContent = dur(night);
-    $("sNap").textContent = napped ? dur(napLen) : "None";
-    $("sTotal").textContent = dur(night + napLen);
+    $("sNap").textContent = r.napped ? dur(r.napLen) : "None";
+    $("sTotal").textContent = dur(night + r.napLen);
 
+    const notes = r.notes.slice();
+    if (asleep > LATE_BED) notes.push("That's a late bedtime for a 3-year-old. Expect her to be tired tomorrow, and keep the nap earlier.");
     $("notes").innerHTML = "";
     notes.forEach((n) => { const li = document.createElement("li"); li.textContent = n; $("notes").appendChild(li); });
+
+    tick();
+    renderSide(p);
   }
 
-  // restore saved values
-  ["wake", "napStart", "napEnd", "bathMin", "booksMin", "settleMin"].forEach((id) => {
-    const v = store.get("sleep." + id); if (v) $(id).value = v;
-  });
-  napped = store.get("sleep.napped") !== "0";
+  function tick() {
+    const el = $("countdown");
+    if (!plan || activeDay() !== day) { el.hidden = true; return; }
+    const n = nowEve();
+    let text = "", cls = "";
+    if (n < plan.bathStart) {
+      const left = plan.bathStart - n;
+      if (left > 6 * 60) { el.hidden = true; return; }
+      text = `Bath in ${dur(left)}`; cls = left <= 15 ? "soon" : "";
+    } else if (n < plan.booksStart) { text = `Bath time now. Books at ${fmt(plan.booksStart)}`; cls = "now"; }
+    else if (n < plan.lights) { text = `Books now. Lights out at ${fmt(plan.lights)}`; cls = "now"; }
+    else if (n < plan.asleep) { text = `Lights out. Asleep by ${fmt(plan.asleep)}`; cls = "now"; }
+    else if (n < plan.asleep + 180 && !cur.actual) { text = "Log when she fell asleep below"; cls = ""; }
+    else { el.hidden = true; return; }
+    el.textContent = text; el.className = "countdown " + cls; el.hidden = false;
+  }
 
-  $("napYes").addEventListener("click", () => setNap(true));
-  $("napNo").addEventListener("click", () => setNap(false));
-  ["wake", "napStart", "napEnd", "bathMin", "booksMin", "settleMin"].forEach((id) => $(id).addEventListener("input", calc));
-  setNap(napped);
+  function renderSide(p) {
+    p = p || patterns();
+    // patterns
+    const body = $("patBody"); body.innerHTML = "";
+    const para = (t, c) => { const e = document.createElement("p"); e.textContent = t; if (c) e.className = c; body.appendChild(e); };
+    if (p.n < MIN_NIGHTS) {
+      para(`Log when she fell asleep for ${MIN_NIGHTS} nights and her patterns will show here. ${p.n} of ${MIN_NIGHTS} so far.`, "muted");
+    } else {
+      const m = Math.round(p.all);
+      if (Math.abs(m) < 5) para(`She falls asleep right around the planned time (last ${p.n} nights).`);
+      else para(`She usually falls asleep ${dur(m)} ${m > 0 ? "later" : "earlier"} than planned (last ${p.n} nights).`);
+      if (p.nap !== null && p.noNap !== null) para(`Nap days ${signed(Math.round(p.nap))} · No-nap days ${signed(Math.round(p.noNap))}`, "muted");
+      if (p.night !== null) para(`Average night sleep: ${dur(p.night)}.`, "muted");
+      if (m >= 10) para("Falling asleep later than planned usually means bedtime is a little early for her.");
+      else if (m <= -10) para("Falling asleep before the planned time usually means she's ready for bed a little earlier.");
+      else para("The plan suits her well.");
+    }
+    const off = p.n >= MIN_NIGHTS ? offsetFrom(p.all) : 0;
+    $("adaptHint").textContent = p.n < MIN_NIGHTS
+      ? "This turns on once there are 5 logged nights."
+      : (S.adapt ? (off ? `Adjusting bedtime by about ${dur(off)} ${off > 0 ? "later" : "earlier"}.` : "On. No adjustment needed right now.") : (off ? `If you turn this on, bedtime moves about ${dur(off)} ${off > 0 ? "later" : "earlier"}.` : "Off. No adjustment would be made right now."));
+
+    // log
+    const list = $("log"); list.innerHTML = "";
+    const keys = Object.keys(state.log).sort().reverse().slice(0, 14);
+    if (!keys.length) { const li = document.createElement("li"); li.className = "empty"; li.textContent = "Nothing logged yet. Today's plan is saved when you change a time or log when she fell asleep."; list.appendChild(li); return; }
+    keys.forEach((k) => {
+      const e = state.log[k];
+      const li = document.createElement("li");
+      const top = document.createElement("div"); top.className = "top";
+      const d = document.createElement("span"); d.className = "date"; d.textContent = dayLabel(k) + (k === day ? " (today)" : "");
+      const del = document.createElement("button"); del.className = "del"; del.textContent = "Delete"; del.setAttribute("aria-label", "Delete " + dayLabel(k));
+      del.onclick = () => { if (confirm(`Delete ${dayLabel(k)} from the log?`)) { delete state.log[k]; save(); if (k === day) cur = draft(), syncInputs(); calc(false); } };
+      top.append(d, del);
+      const meta = document.createElement("div"); meta.className = "meta";
+      const parts = [];
+      if (e.wake) parts.push("Woke " + fmt(toMin(e.wake)));
+      if (e.napMode === "no") parts.push("No nap");
+      else if (e.napStart && e.napEnd && e.napMode === "yes") parts.push(`Nap ${fmt(toMin(e.napStart))}–${fmt(toMin(e.napEnd))}`);
+      if (typeof e.planned === "number") parts.push("Planned " + fmt(e.planned));
+      const nx = state.log[nextKey(k)], a = eveMin(e.actual);
+      if (a !== null && nx && toMin(nx.wake) !== null) parts.push("Night " + dur(toMin(nx.wake) + 1440 - a));
+      meta.textContent = parts.join(" · ");
+      const act = document.createElement("div"); act.className = "act";
+      const lab = document.createElement("span"); lab.textContent = "Asleep";
+      const inp = document.createElement("input"); inp.type = "time"; inp.value = e.actual || ""; inp.setAttribute("aria-label", "Fell asleep at, " + dayLabel(k));
+      inp.addEventListener("change", () => {
+        state.log[k].actual = inp.value; save();
+        if (k === day) { cur.actual = inp.value; $("actual").value = inp.value; }
+        calc(false);
+      });
+      const pill = document.createElement("span"); pill.className = "pill";
+      if (a !== null && typeof e.base === "number") pill.textContent = signed(a - (e.base + (e.nudge || 0))) + " vs plan";
+      else pill.hidden = true;
+      act.append(lab, inp, pill);
+      li.append(top, meta, act);
+      list.appendChild(li);
+    });
+  }
+
+  // ---------- events ----------
+  ["wake", "napStart", "napEnd"].forEach((id) => $(id).addEventListener("input", () => { cur[id] = $(id).value; calc(true); }));
+  $("actual").addEventListener("change", () => { cur.actual = $("actual").value; calc(true); });
+  document.querySelectorAll("[data-nap]").forEach((b) => b.addEventListener("click", () => { cur.napMode = b.dataset.nap; calc(true); }));
+  document.querySelectorAll("[data-now]").forEach((b) => b.addEventListener("click", () => {
+    const id = b.dataset.now; $(id).value = nowHHMM(); cur[id] = $(id).value;
+    calc(true);
+  }));
+  $("sheIsUp").addEventListener("click", () => { cur.napMode = "yes"; cur.napEnd = nowHHMM(); $("napEnd").value = cur.napEnd; calc(true); });
+  $("tired").addEventListener("click", () => { cur.nudge = Math.max(-60, (cur.nudge || 0) - 15); calc(true); });
+  $("wired").addEventListener("click", () => { cur.nudge = Math.min(60, (cur.nudge || 0) + 15); calc(true); });
+  ["targetWake", "latestBed"].forEach((id) => $(id).addEventListener("input", () => { if ($(id).value) { S[id] = $(id).value; save(); calc(!!state.log[day]); } }));
+  ["bath", "books", "settle"].forEach((id) => $(id).addEventListener("input", () => { const n = parseInt($(id).value, 10); if (Number.isFinite(n) && n >= 0) { S[id] = n; save(); calc(!!state.log[day]); } }));
+  $("adapt").addEventListener("change", () => { S.adapt = $("adapt").checked; save(); calc(!!state.log[day]); });
+
+  setInterval(tick, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { if (activeDay() !== day) location.reload(); else tick(); } });
+
+  syncInputs();
+  calc(false);
 })();
 </script>
 </body>
