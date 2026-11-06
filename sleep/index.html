@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bedtime Planner</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bedtime">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f3ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131318" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <meta name="description" content="Works back from today's wake-up and nap to a suggested bedtime, books time and bath time for a 3-year-old, and learns from her sleep log.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -54,6 +63,8 @@ input[type="time"]::-webkit-date-and-time-value { text-align: left; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
 .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.row, .row3 { margin-bottom: 14px; }
+.row > .field, .row3 > .field { margin-bottom: 0; }
 .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--surface-2); border-radius: 10px; padding: 4px; gap: 4px; }
 .seg button { font: inherit; font-weight: 600; font-size: 15px; border: 0; border-radius: 8px; padding: 10px 4px; background: transparent; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
@@ -154,6 +165,23 @@ details p, details ul { margin: 8px 0; }
 .savebar .btn { flex-shrink: 0; white-space: nowrap; }
 .saved { font-size: 14px; color: var(--muted); }
 .saved.ok { color: var(--good); font-weight: 600; }
+.now { border: 2px solid var(--accent); }
+.now h2 { font-size: 20px; text-transform: none; letter-spacing: -0.01em; color: var(--text); margin-bottom: 4px; }
+.now-text { margin: 0 0 12px; font-size: 16px; }
+.now-acts { display: grid; gap: 8px; }
+.now-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.now-acts .btn:not(.big) { padding: 11px 12px; font-size: 15px; }
+.lastnight { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.lastnight p { margin: 0 0 10px; font-size: 15px; }
+details.fold { font-size: inherit; color: inherit; }
+details.fold > summary { list-style: none; display: flex; align-items: center; gap: 10px; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary h2 { margin: 0; flex: 1; }
+details.fold > summary::after { content: "▾"; color: var(--muted); font-size: 16px; transition: transform .15s; }
+details.fold:not([open]) > summary::after { transform: rotate(-90deg); }
+details.fold[open] > summary { margin-bottom: 12px; }
+.badge { font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.badge.hot { background: var(--accent); color: var(--surface); }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
@@ -161,11 +189,13 @@ details p, details ul { margin: 8px 0; }
 <body>
 <div class="wrap">
   <h1>Bedtime planner</h1>
-  <p class="sub">Enter today's wake-up and nap to get dinner, bath, books and bedtime.</p>
+  <p class="sub">Tap the button in "Right now" as the day goes. Everything saves automatically.</p>
 
-  <section class="card" id="nightBar" hidden>
-    <button type="button" class="btn primary big" id="awakeBtn">She's awake</button>
-    <div class="hint" id="nightBarHint"></div>
+  <section class="card now" id="nowCard" aria-live="polite">
+    <h2 id="nowTitle">Right now</h2>
+    <p class="now-text" id="nowText"></p>
+    <div class="now-acts" id="nowActs"></div>
+    <div id="nowExtra"></div>
   </section>
 
   <section class="card">
@@ -290,18 +320,20 @@ details p, details ul { margin: 8px 0; }
   </section>
 
   <section class="card pat">
-    <h2>Her patterns</h2>
+    <details class="fold" id="patFold"><summary><h2>Her patterns</h2><span class="badge" id="patBadge" hidden></span></summary>
     <div id="patBody"></div>
+    </details>
   </section>
 
   <section class="card pat" id="nightCard">
-    <h2>Night wakings</h2>
+    <details class="fold" id="nightFold"><summary><h2>Night wakings</h2><span class="badge" id="nightBadge" hidden></span></summary>
     <div id="nightBody"></div>
     <button type="button" class="btn" id="awakeBtn2">She's awake: log a waking</button>
+    </details>
   </section>
 
   <section class="card">
-    <h2>Last two weeks</h2>
+    <details class="fold" id="chartFold"><summary><h2>Last two weeks</h2></summary>
     <div class="chartwrap" id="chartWrap">
       <svg id="chart" viewBox="0 0 340 230" role="img" aria-label="Lights out and asleep times over the last two weeks"></svg>
       <div class="tip" id="tip" hidden></div>
@@ -313,16 +345,18 @@ details p, details ul { margin: 8px 0; }
       <span><i class="sw ring"></i>Late or off night</span>
     </div>
     <p class="empty" id="chartEmpty" hidden>The chart appears once 2 nights are logged.</p>
+    </details>
   </section>
 
   <section class="card">
-    <h2>Sleep log</h2>
+    <details class="fold" id="logFold"><summary><h2>Sleep log</h2><span class="badge" id="logBadge" hidden></span></summary>
     <ul class="log" id="log"></ul>
     <div class="hint">Saved on this phone only.</div>
+    </details>
   </section>
 
   <section class="card">
-    <h2>Backup</h2>
+    <details class="fold" id="backupFold"><summary><h2>Backup</h2><span class="badge" id="backupBadge" hidden></span></summary>
     <div class="row">
       <button type="button" class="btn" id="exportBtn">Export</button>
       <button type="button" class="btn" id="importBtn">Import</button>
@@ -330,6 +364,7 @@ details p, details ul { margin: 8px 0; }
     <input type="file" id="importFile" accept=".json,application/json" hidden>
     <p class="hint" id="backupMsg" aria-live="polite"></p>
     <div class="hint">Export saves the log and settings as a file you can keep in iCloud, Google Drive or email. Import adds a backup's nights to this phone without removing any. Use it on a new phone or to bring in the other parent's log.</div>
+    </details>
   </section>
 
   <section class="card">
@@ -655,9 +690,9 @@ details p, details ul { margin: 8px 0; }
   }
   function renderLateness(body, para, button) {
     const L = lateness();
-    if (L.n < 6 || L.lateN / L.n < 0.6) return;
+    if (L.n < 6 || L.lateN / L.n < 0.6) return false;
     const head = `You've been running late on ${L.lateN} of the last ${L.n} nights, by about ${dur(L.med)}.`;
-    if (L.mornings < 3) { para(head + " Keep logging her wake-ups and mornings to see whether a later schedule would suit her.", "rec"); return; }
+    if (L.mornings < 3) { para(head + " Keep logging her wake-ups and mornings to see whether a later schedule would suit her.", "rec"); return true; }
     const tgt = toMin(S.targetWake), latest = toMin(S.latestWake || "07:15");
     const room = Math.floor((latest - tgt) / 15) * 15;
     const by = Math.min(Math.max(15, Math.round(L.med / 15) * 15), room);
@@ -665,7 +700,7 @@ details p, details ul { margin: 8px 0; }
     if (copes && by >= 15) {
       para(`${head} After those nights she slept in on ${L.sleptIn} of ${L.mornings} mornings and was mostly happy, so a later day may suit her. Try waking at ${fmt(tgt + by)} with bedtime ${by} minutes later, for ${TRIAL_NIGHTS} nights.`, "rec");
       button(`Start a ${TRIAL_NIGHTS}-night trial: wake ${fmt(tgt + by)}`, () => startTrial("later", by));
-      return;
+      return true;
     }
     para(head + (copes
       ? ` She does sleep in after late nights, but there's no room before your latest wake-up (${fmt(latest)}), so it's better to make the evening fit:`
@@ -683,6 +718,7 @@ details p, details ul { margin: 8px 0; }
     const nb = Math.max(20, Math.min(books, books - cut)); cut -= books - nb;
     const nbath = Math.max(15, Math.min(bath, bath - Math.max(0, cut)));
     if (nq !== digest || nb !== books || nbath !== bath) button(`Plan a shorter routine: ${nq} min quiet time, ${nbath} min bath, ${nb} min books`, () => { S.digest = nq; S.books = nb; S.bath = nbath; save(); syncInputs(); calc(!!state.log[day]); });
+    return true;
   }
 
   // ---------- 4-night trials ----------
@@ -924,8 +960,8 @@ details p, details ul { margin: 8px 0; }
     renderSide(p);
   }
 
-  function tick() {
-    renderNightBar();
+  function tick() { tickInner(); renderNow(); }
+  function tickInner() {
     const cd = $("countdown");
     if (!plan || activeDay() !== day) { cd.hidden = true; $("lateWrap").hidden = true; return; }
     const n = nowEve();
@@ -997,7 +1033,9 @@ details p, details ul { margin: 8px 0; }
       para(`Before happy mornings she'd had about ${dur(hv)} of sleep (night and nap).`);
       if (Math.abs(hv - (+S.need || 720)) >= 20) button(`Use ${dur(hv)} as her sleep need (now ${dur(+S.need || 720)})`, () => { S.need = hv; save(); syncInputs(); calc(!!state.log[day]); });
     }
-    if (!state.trial) renderLateness(body, para, button);
+    const lateShown = !state.trial && renderLateness(body, para, button);
+    if (state.trial) { const due = shiftKey(state.trial.start, TRIAL_NIGHTS); setBadge("patBadge", day >= due ? "Check-in ready" : "Trial running", day >= due); if (day >= due) $("patFold").open = true; }
+    else setBadge("patBadge", (rec && rec.delta !== undefined) || lateShown ? "Suggestion" : "", true);
     if (p.lateN) para(`${p.lateN} late ${p.lateN === 1 ? "night" : "nights"} not used to judge bedtime (settle times still count).`, "muted");
     if (p.offN) para(`${p.offN} sick or off ${p.offN === 1 ? "night" : "nights"} left out.`, "muted");
   }
@@ -1071,6 +1109,10 @@ details p, details ul { margin: 8px 0; }
 
   function renderLog() {
     const list = $("log"); list.innerHTML = "";
+    const nLogged = Object.keys(state.log).length;
+    setBadge("logBadge", nLogged ? `${nLogged} ${nLogged === 1 ? "day" : "days"}` : "");
+    const days = state.lastExport ? Math.floor((Date.now() - state.lastExport) / 86400000) : null;
+    setBadge("backupBadge", nLogged >= 3 && (days === null || days >= 7) ? "Worth exporting" : "");
     const keys = Object.keys(state.log).sort().reverse().slice(0, 14);
     if (!keys.length) { list.appendChild(el("li", "empty", "Nothing logged yet. Tap Save today, or change any time, and today's entry appears here.")); return; }
     keys.forEach((k) => {
@@ -1220,11 +1262,17 @@ details p, details ul { margin: 8px 0; }
     const para = (t, c) => body.appendChild(el("p", c || null, t));
     const yesterday = shiftKey(day, -1);
     const NP = state.nightPlan;
-    if (NP) { renderNightPlan(body, NP, yesterday); return; }
+    if (NP) {
+      const due = shiftKey(NP.start, NP.len), nn = Math.round((parseKey(day) - parseKey(NP.start)) / 86400000) + 1;
+      setBadge("nightBadge", day >= due ? "Check-in ready" : nn < 1 ? "Plan starts tonight" : `Plan night ${nn} of ${NP.len}`, day >= due);
+      if (day >= due) $("nightFold").open = true;
+      renderNightPlan(body, NP, yesterday); return;
+    }
     const A = analyse(nightKeys(shiftKey(day, -14), yesterday));
     if (A.nights) para(`Last 2 weeks: woke on ${A.wakeNights} of ${A.nights} nights, ${A.avg.toFixed(1)} times a night on average.`, "muted");
     if (A.detailed.length) para("Logged reasons: " + CAUSES.filter(([v]) => A.cause[v]).map(([v, l]) => `${l.toLowerCase()} (${A.cause[v]})`).join(", ") + ".", "muted");
     const sg = nightSuggest(A);
+    setBadge("nightBadge", sg && sg.kind ? "Plan suggested" : "", true);
     if (!sg) para(`Log 5 nights to see her night pattern: a morning wake-up, or "She's awake" when she wakes. ${A.nights} of 5 so far.`, "muted");
     else {
       para(sg.text, "rec");
@@ -1294,29 +1342,157 @@ details p, details ul { margin: 8px 0; }
     };
     grid("nmCause", CAUSES, "cause"); grid("nmResp", RESPS, "resp");
   }
-  function renderNightBar() {
-    const h = new Date().getHours();
-    const open = state.openWake ? state.wakes.find((w) => w.id === state.openWake) : null;
-    $("nightBar").hidden = !(h >= 18 || h < 8 || open);
-    $("awakeBtn").textContent = open ? `Awake since ${fmt(toMin(open.t))}: open` : "She's awake";
-    const NP = state.nightPlan, tonight = wakesFor(nightKeyNow());
-    $("nightBarHint").textContent = NP && NP.stir != null && NP.start <= nightKeyNow() ? `Night plan: stir her at about ${fmt(NP.stir)}.`
-      : tonight.length ? `Logged tonight: ${tonight.map((w) => fmt(toMin(w.t))).join(", ")}.`
-      : "Tap when she wakes in the night. It records the time for you.";
-  }
   function morningNightHint() {
     const ws = wakesFor(shiftKey(day, -1)), hint = $("nwLogged");
     hint.hidden = !ws.length;
     if (ws.length) hint.textContent = `Logged last night: ${ws.map((w) => `${fmt(toMin(w.t))}${w.cause ? " " + labelOf(CAUSES, w.cause).toLowerCase() : ""}${wakeLen(w) ? ` (${dur(wakeLen(w))})` : ""}`).join(", ")}. Only use the counter for wakings you didn't log.`;
     $("snoreChip").setAttribute("aria-pressed", String(!!cur.snore));
   }
-  $("awakeBtn").addEventListener("click", openNight);
   $("awakeBtn2").addEventListener("click", openNight);
   $("nmBack").addEventListener("click", () => { const w = state.wakes.find((x) => x.id === openId); if (w) w.back = nowHHMM(); state.openWake = null; save(); closeNight(); });
   $("nmClose").addEventListener("click", closeNight);
   $("nmDelete").addEventListener("click", () => { state.wakes = state.wakes.filter((x) => x.id !== openId); state.openWake = null; save(); closeNight(); });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !$("nightMode").hidden) closeNight(); });
   $("snoreChip").addEventListener("click", () => { cur.snore = !cur.snore; calc(true); });
+
+  // ---------- "Right now" panel: the one or two things to tap at this time of day ----------
+  function setWake(v) { cur.wake = v; cur.wakeSet = true; $("wake").value = v; calc(true); }
+  function renderNightBar() { renderNow(); }
+  function renderNow() {
+    const title = $("nowTitle"), text = $("nowText"), acts = $("nowActs"), extra = $("nowExtra");
+    acts.innerHTML = ""; extra.innerHTML = ""; text.textContent = "";
+    const big = (label, fn) => { const b = el("button", "btn primary big", label); b.type = "button"; b.onclick = fn; acts.appendChild(b); return b; };
+    const small = (label, fn, parent) => { const b = el("button", "btn", label); b.type = "button"; b.onclick = fn; (parent || acts).appendChild(b); return b; };
+    const h = new Date().getHours(), n = nowEve();
+    const open = state.openWake ? state.wakes.find((w) => w.id === state.openWake) : null;
+    const wakeDone = !!cur.wakeSet || !!cur.mood || (!!state.log[day] && toMin(cur.wake) !== null && cur.wake !== S.targetWake);
+    const napDone = !!cur.napSet || cur.napMode === "no";
+    const morning = h >= 4 && h < 12 && activeDay() === day;
+    const NPs = state.nightPlan;
+    const stirHint = NPs && NPs.stir != null && NPs.start <= nightKeyNow() ? ` Night plan: stir her at about ${fmt(NPs.stir)}.` : "";
+
+    if (open) {
+      title.textContent = "She's awake";
+      text.textContent = `Awake since ${fmt(toMin(open.t))}.`;
+      big("Open the night screen", openNight);
+      return;
+    }
+    if (morning) lastNightTools(extra);
+    if (morning && !wakeDone) {
+      title.textContent = "Good morning";
+      text.textContent = "When did she wake up?";
+      big("She woke up now", () => setWake(nowHHMM()));
+      if (toMin(cur.wake) !== null) small(`She woke at ${fmt(toMin(cur.wake))}`, () => setWake(cur.wake));
+      small("A different time: edit below", () => { $("wake").scrollIntoView({ block: "center" }); $("wake").focus(); });
+      if (h < 6) small("She's awake in the night", openNight);
+      return;
+    }
+    if (morning && !cur.mood && !cur.moodSkipped) {
+      title.textContent = "Good morning";
+      text.textContent = `Woke at ${fmt(toMin(cur.wake))}. How is she this morning?`;
+      const row = el("div", "now-row"); acts.appendChild(row);
+      [["happy", "Happy"], ["ok", "OK"], ["grumpy", "Grumpy"]].forEach(([v, l]) => small(l, () => { cur.mood = v; calc(true); }, row));
+      small("Skip", () => { cur.moodSkipped = true; calc(true); });
+      return;
+    }
+    if (!plan) { title.textContent = "Today"; text.textContent = "Check the times in the Today card below."; return; }
+    if (cur.napMode === "now") {
+      title.textContent = "Napping";
+      text.textContent = `Asleep since ${fmt(toMin(cur.napStart))}.` + ($("wakeBy").hidden ? "" : ` Wake her by ${$("wakeByTime").textContent}.`);
+      big("Nap ended now", () => { cur.napMode = "yes"; cur.napSet = true; cur.napEnd = nowHHMM(); $("napEnd").value = cur.napEnd; calc(true); });
+      return;
+    }
+    const evening = n >= plan.origDinner - 60;
+    if (!evening && !napDone) {
+      title.textContent = "Nap";
+      text.textContent = "Tap when her nap starts, or if there's no nap today.";
+      big("Nap started now", () => { cur.napMode = "now"; cur.napSet = true; cur.napStart = nowHHMM(); $("napStart").value = cur.napStart; calc(true); });
+      small("No nap today", () => { cur.napMode = "no"; cur.napSet = true; calc(true); });
+      small("She already napped: enter times", () => { cur.napMode = "yes"; cur.napSet = true; calc(true); $("napStart").scrollIntoView({ block: "center" }); });
+      return;
+    }
+    if (!evening) {
+      title.textContent = "Today";
+      text.textContent = `Dinner at ${fmt(plan.dinnerStart)}, lights out ${fmt(plan.lights)}, asleep by ${fmt(plan.asleep)}.`;
+      return;
+    }
+    if (!cur.lightsOut && !cur.actual) {
+      title.textContent = "Tonight";
+      const cdText = $("countdown").hidden ? "" : $("countdown").textContent + ". ";
+      if (n < plan.booksStart) text.textContent = cdText + `Dinner ${fmt(plan.dinnerStart)}, bath ${fmt(plan.bathStart)}, books ${fmt(plan.booksStart)}, lights out ${fmt(plan.lights)}.`;
+      else {
+        text.textContent = (cdText || `Lights out at ${fmt(plan.lights)}, asleep by ${fmt(plan.asleep)}.`) + stirHint;
+        big("Lights out now", () => { cur.lightsOut = nowHHMM(); $("lightsOut").value = cur.lightsOut; calc(true); });
+      }
+      if (!$("lateWrap").hidden) small("Running late? Catch-up options", () => $("lateWrap").scrollIntoView({ block: "center" }));
+      if (n >= plan.asleep) small("She's awake in the night", openNight);
+      return;
+    }
+    if (!cur.actual) {
+      title.textContent = "Settling";
+      text.textContent = `Lights out at ${fmt(eveMin(cur.lightsOut))}. Tap when she's asleep.` + stirHint;
+      big("She's asleep now", () => { cur.actual = nowHHMM(); $("actual").value = cur.actual; calc(true); });
+      small(cur.stall ? "Stalling or calling out ✓" : "She's stalling or calling out", () => { cur.stall = !cur.stall; calc(true); });
+      if (n >= plan.asleep + 60) small("She's awake in the night", openNight);
+      return;
+    }
+    title.textContent = "Goodnight";
+    const NP = state.nightPlan, tonight = wakesFor(nightKeyNow());
+    text.textContent = `Lights out ${fmt(eveMin(cur.lightsOut) ?? 0)}, asleep ${fmt(eveMin(cur.actual))}. All saved.`
+      + stirHint
+      + (tonight.length ? ` Wakings logged: ${tonight.map((w) => fmt(toMin(w.t))).join(", ")}.` : "");
+    big("She's awake", openNight);
+  }
+
+  // Morning helpers for last night: move times that landed on today, or add them.
+  function lastNightTools(box) {
+    const y = shiftKey(day, -1), ye = state.log[y] || {};
+    const n = nowEve();
+    const lo = eveMin(cur.lightsOut), as = eveMin(cur.actual);
+    if ((lo !== null && lo > n) || (as !== null && as > n)) {
+      const d = el("div", "lastnight");
+      d.append(el("p", null, `Today's entry has ${[lo !== null ? `lights out ${fmt(lo)}` : "", as !== null ? `asleep ${fmt(as)}` : ""].filter(Boolean).join(" and ")}, which look like last night's. Move them to ${dayLabel(y)}?`));
+      const b = el("button", "btn", "Move to last night"); b.type = "button";
+      b.onclick = () => {
+        const e = state.log[y] = Object.assign({}, state.log[y] || {});
+        if (cur.lightsOut && !e.lightsOut) e.lightsOut = cur.lightsOut;
+        if (cur.actual && !e.actual) e.actual = cur.actual;
+        if (cur.stall) e.stall = true;
+        e.savedAt = nowHHMM();
+        cur.lightsOut = ""; cur.actual = ""; cur.stall = false; syncInputs(); calc(true);
+      };
+      d.append(b); box.append(d); return;
+    }
+    if (ye.actual) return;
+    const d = el("div", "lastnight");
+    d.append(el("p", "flabel", `Last night (${dayLabel(y)})`));
+    const mk = (label, val) => {
+      const f = el("div", "field"); const l = el("label", null, label); const i = document.createElement("input");
+      i.type = "time"; i.value = val || ""; i.id = "ln" + label.replace(/\W/g, ""); l.htmlFor = i.id; f.append(l, i); return [f, i];
+    };
+    const [f1, lo1] = mk("Lights out", ye.lightsOut), [f2, as1] = mk("Asleep", ye.actual);
+    const row = el("div", "row"); row.append(f1, f2); d.append(row);
+    const b = el("button", "btn", "Save last night"); b.type = "button";
+    b.onclick = () => {
+      if (!lo1.value && !as1.value) return;
+      state.log[y] = Object.assign({}, state.log[y] || {}, { lightsOut: lo1.value, actual: as1.value, savedAt: nowHHMM() });
+      save(); calc(false);
+    };
+    d.append(b); box.append(d);
+  }
+
+  // Folded sections remember whether they're open on this phone.
+  const FOLDS = ["patFold", "nightFold", "chartFold", "logFold", "backupFold"];
+  (() => {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem("sleep.folds") || "{}") || {}; } catch (e) {}
+    FOLDS.forEach((id) => {
+      const d = $(id); if (!d) return;
+      if (saved[id]) d.open = true;
+      d.addEventListener("toggle", () => { saved[id] = d.open; try { localStorage.setItem("sleep.folds", JSON.stringify(saved)); } catch (e) {} });
+    });
+  })();
+  function setBadge(id, txt, hot) { const b = $(id); if (!b) return; b.textContent = txt || ""; b.hidden = !txt; b.className = "badge" + (hot ? " hot" : ""); }
 
   // ---------- save buttons ----------
   function renderSaved(flash) {
@@ -1347,6 +1523,7 @@ details p, details ul { margin: 8px 0; }
     if (typeof e.stall === "boolean") o.stall = e.stall;
     if (typeof e.off === "boolean") o.off = e.off;
     if (typeof e.snore === "boolean") o.snore = e.snore;
+    ["wakeSet", "napSet", "moodSkipped"].forEach((f) => { if (typeof e[f] === "boolean") o[f] = e[f]; });
     if (typeof e.wiredOT === "string") o.wiredOT = e.wiredOT.slice(0, 120);
     return o;
   }
@@ -1416,15 +1593,16 @@ details p, details ul { margin: 8px 0; }
   }
 
   // ---------- events ----------
-  ["wake", "napStart", "napEnd"].forEach((id) => $(id).addEventListener("input", () => { cur[id] = $(id).value; calc(true); }));
+  ["wake", "napStart", "napEnd"].forEach((id) => $(id).addEventListener("input", () => { cur[id] = $(id).value; if (id === "wake") cur.wakeSet = true; else cur.napSet = true; calc(true); }));
   ["actual", "lightsOut"].forEach((id) => $(id).addEventListener("change", () => { cur[id] = $(id).value; calc(true); }));
-  document.querySelectorAll("[data-nap]").forEach((b) => b.addEventListener("click", () => { cur.napMode = b.dataset.nap; calc(true); }));
+  document.querySelectorAll("[data-nap]").forEach((b) => b.addEventListener("click", () => { cur.napMode = b.dataset.nap; cur.napSet = true; calc(true); }));
   document.querySelectorAll("[data-mood]").forEach((b) => b.addEventListener("click", () => { cur.mood = cur.mood === b.dataset.mood ? "" : b.dataset.mood; calc(true); }));
   document.querySelectorAll("[data-now]").forEach((b) => b.addEventListener("click", () => {
     const id = b.dataset.now; $(id).value = nowHHMM(); cur[id] = $(id).value;
+    if (id === "wake") cur.wakeSet = true; if (id === "napStart" || id === "napEnd") cur.napSet = true;
     calc(true);
   }));
-  $("sheIsUp").addEventListener("click", () => { cur.napMode = "yes"; cur.napEnd = nowHHMM(); $("napEnd").value = cur.napEnd; calc(true); });
+  $("sheIsUp").addEventListener("click", () => { cur.napMode = "yes"; cur.napSet = true; cur.napEnd = nowHHMM(); $("napEnd").value = cur.napEnd; calc(true); });
   $("lateDinner").addEventListener("click", () => { cur.startedAt = nowHHMM(); cur.startedStep = "dinner"; calc(true); });
   $("lateBath").addEventListener("click", () => { cur.startedAt = nowHHMM(); cur.startedStep = "bath"; calc(true); });
   $("tired").addEventListener("click", () => { cur.wiredOT = ""; cur.nudge = Math.max(-60, (cur.nudge || 0) - 15); calc(true); });
