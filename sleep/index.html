@@ -148,7 +148,7 @@ input[type="time"]::-webkit-date-and-time-value { text-align: left; }
 details { font-size: 14px; color: var(--muted); }
 details summary { cursor: pointer; font-weight: 500; color: var(--text); }
 details p, details ul { margin: 8px 0; }
-.btn.big { width: 100%; font-size: 18px; padding: 14px; }
+.btn.lg { width: 100%; font-size: 18px; padding: 14px; }
 .stars { font-size: 22px; letter-spacing: 2px; color: var(--c-lights); margin: 0 0 4px; }
 .nightmode { position: fixed; inset: 0; z-index: 50; background: #000; color: #c98a5a; overflow-y: auto; }
 .nm-inner { max-width: 520px; margin: 0 auto; padding: 28px 16px 40px; }
@@ -166,7 +166,33 @@ details p, details ul { margin: 8px 0; }
 .saved { font-size: 14px; color: var(--muted); }
 .saved.ok { color: var(--good); font-weight: 600; }
 .now { border: 2px solid var(--accent); }
-.now h2 { font-size: 20px; text-transform: none; letter-spacing: -0.01em; color: var(--text); margin-bottom: 4px; }
+.next { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); text-align: left; }
+.next-title { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+#countdown { display: none !important; }
+.day { list-style: none; margin: 0; padding: 0; }
+.step { border-bottom: 1px solid var(--border); }
+.step:last-child { border-bottom: 0; }
+.step-head { font: inherit; color: inherit; background: none; border: 0; text-align: left; width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 12px; gap: 10px; align-items: center; padding: 11px 0; }
+button.step-head { cursor: pointer; }
+button.step-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.st { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--c, var(--border)); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--surface); }
+.step[data-st="done"] .st { background: var(--good); border-color: var(--good); }
+.step[data-st="done"] .st::after { content: "✓"; }
+.step[data-st="now"] .st { background: var(--accent); border-color: var(--accent); }
+.step[data-st="todo"] .st { border-style: dashed; border-color: var(--warn); }
+.step[data-st="now"] { background: var(--accent-soft); margin: 0 -18px; padding: 0 18px; }
+.step[data-st="now"] .nm { font-weight: 700; }
+.step[data-st="past"] .nm, .step[data-st="past"] .tm { color: var(--muted); }
+.nm { font-weight: 500; min-width: 0; }
+.nm .sub { display: block; font-size: 13px; color: var(--muted); font-weight: 400; }
+.tm { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.step[data-st="todo"] .tm { color: var(--warn); }
+.chev { color: var(--muted); font-size: 18px; transition: transform .15s; }
+.step.open .chev { transform: rotate(90deg); }
+.step-edit { display: none; padding: 2px 0 14px 32px; }
+.step.open .step-edit { display: block; }
+.statline { font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+.statline b { color: var(--text); }
 .now-text { margin: 0 0 12px; font-size: 16px; }
 .now-acts { display: grid; gap: 8px; }
 .now-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
@@ -189,83 +215,22 @@ details.fold[open] > summary { margin-bottom: 12px; }
 <body>
 <div class="wrap">
   <h1>Bedtime planner</h1>
-  <p class="sub">Tap the button in "Right now" as the day goes. Everything saves automatically.</p>
+  <p class="sub">Tap the button below as the day goes. Tap any row in Today to change it. Everything saves automatically.</p>
 
-  <section class="card now" id="nowCard" aria-live="polite">
-    <h2 id="nowTitle">Right now</h2>
-    <p class="now-text" id="nowText"></p>
-    <div class="now-acts" id="nowActs"></div>
-    <div id="nowExtra"></div>
-  </section>
-
-  <section class="card">
-    <h2>Today</h2>
-    <div class="field">
-      <label for="wake">Woke up at</label>
-      <div class="tin"><input type="time" id="wake"><button type="button" class="btn" data-now="wake">Now</button></div>
-      <div class="hint" id="wakeHint"></div>
-    </div>
-    <div class="field">
-      <span class="flabel" id="moodLabel">How was she this morning?</span>
-      <div class="seg" role="group" aria-labelledby="moodLabel">
-        <button type="button" data-mood="happy">Happy</button>
-        <button type="button" data-mood="ok">OK</button>
-        <button type="button" data-mood="grumpy">Grumpy</button>
-      </div>
-      <div class="hint">Her mood in the morning is the best sign of whether last night was enough.</div>
-    </div>
-    <div class="field">
-      <span class="flabel" id="nwLabel">Woke in the night</span>
-      <div class="stepper" role="group" aria-labelledby="nwLabel">
-        <button type="button" class="btn" id="nwMinus" aria-label="One fewer">−</button>
-        <span id="nwCount">0 times</span>
-        <button type="button" class="btn" id="nwPlus" aria-label="One more">+</button>
-      </div>
-      <div id="nwAwakeField" hidden style="margin-top:10px">
-        <label for="nightAwake">Roughly how long awake in total (min)</label>
-        <input type="number" id="nightAwake" min="0" max="300" step="5" placeholder="15">
-      </div>
-      <div class="hint" id="nwLogged" hidden></div>
-      <div class="chips" style="margin-top:8px"><button type="button" class="chip" id="snoreChip" aria-pressed="false">Snored or gasped</button></div>
-    </div>
-    <div class="field">
-      <span class="flabel" id="napLabel">Nap</span>
-      <div class="seg" role="group" aria-labelledby="napLabel">
-        <button type="button" data-nap="yes">Napped</button>
-        <button type="button" data-nap="now">Napping now</button>
-        <button type="button" data-nap="no">No nap</button>
-      </div>
-    </div>
-    <div id="napTimes">
-      <div class="field">
-        <label for="napStart">Nap start</label>
-        <div class="tin"><input type="time" id="napStart"><button type="button" class="btn" data-now="napStart">Now</button></div>
-      </div>
-      <div class="field" id="napEndField">
-        <label for="napEnd">Nap end</label>
-        <div class="tin"><input type="time" id="napEnd"><button type="button" class="btn" data-now="napEnd">Now</button></div>
-      </div>
-    </div>
-    <div class="wakeby" id="wakeBy" hidden>
-      <div class="lbl">Wake her by</div>
-      <div class="val" id="wakeByTime">–</div>
-      <p id="wakeByWhy"></p>
-      <button type="button" class="btn primary" id="sheIsUp">She's up now</button>
-    </div>
-    <div class="savebar">
-      <button type="button" class="btn primary" id="saveDay">Save today</button>
-      <span class="saved" id="savedDay" aria-live="polite"></span>
-    </div>
-  </section>
-
-  <section class="card hero" aria-live="polite">
+  <section class="card hero" id="nowCard" aria-live="polite">
     <div class="pair">
       <div><div class="label">Lights out</div><div class="big lo" id="heroLights">–</div></div>
       <div><div class="label">Asleep by</div><div class="big" id="asleepBy">–</div></div>
     </div>
     <p class="why" id="why"></p>
+    <ul class="notes" id="notes"></ul>
     <p class="error" id="error" hidden></p>
-    <div id="countdown" class="countdown" hidden></div>
+    <div class="next">
+      <div class="next-title" id="nowTitle"></div>
+      <p class="now-text" id="nowText"></p>
+      <div class="now-acts" id="nowActs"></div>
+      <div id="nowExtra"></div>
+    </div>
     <div class="nudge" id="nudgeBtns">
       <button type="button" class="btn" id="tired">Tired: 15 min earlier</button>
       <button type="button" class="btn" id="wired">Wired</button>
@@ -273,50 +238,124 @@ details.fold[open] > summary { margin-bottom: 12px; }
     <div id="otBox" hidden></div>
     <div class="nudge-state" id="nudgeState" hidden></div>
     <div class="catchup" id="lateWrap" hidden>
-      <div class="nudge-state" style="margin:0">Running late? Start a catch-up routine:</div>
-      <div class="nudge" style="margin-top:6px">
-        <button type="button" class="btn primary" id="lateDinner">Starting dinner now</button>
-        <button type="button" class="btn primary" id="lateBath">Starting bath now</button>
+      <button type="button" class="linkbtn" id="lateToggle" aria-expanded="false">Running late? Start a catch-up routine</button>
+      <div class="nudge" id="lateBtns" style="margin-top:6px" hidden>
+        <button type="button" class="btn" id="lateDinner">Starting dinner now</button>
+        <button type="button" class="btn" id="lateBath">Starting bath now</button>
       </div>
     </div>
     <div class="nudge-state" id="catchState" hidden></div>
+    <div id="countdown" hidden></div>
   </section>
 
   <section class="card" id="planCard">
-    <h2>Tonight's routine</h2>
-    <ul class="timeline">
-      <li><span class="dot" style="background:var(--dinner)"></span><span class="t-name">Dinner, screens off<span class="t-dur" id="dDinner"></span></span><span class="t-time" id="tDinner">–</span></li>
-      <li><span class="dot" style="background:var(--screens)"></span><span class="t-name">Quiet time<span class="t-dur" id="dDigest"></span></span><span class="t-time" id="tDigest">–</span></li>
-      <li><span class="dot" style="background:var(--bath)"></span><span class="t-name">Bath starts<span class="t-dur" id="dBath"></span></span><span class="t-time" id="tBath">–</span></li>
-      <li><span class="dot" style="background:var(--books)"></span><span class="t-name">Books start<span class="t-dur" id="dBooks"></span></span><span class="t-time" id="tBooks">–</span></li>
-      <li><span class="dot" style="background:var(--c-lights)"></span><span class="t-name">Lights out<span class="t-dur" id="dSettle"></span></span><span class="t-time" id="tLights">–</span></li>
-      <li><span class="dot" style="background:var(--c-asleep)"></span><span class="t-name">Asleep</span><span class="t-time" id="tSleep">–</span></li>
-    </ul>
-    <div class="stats">
-      <div class="stat"><b id="sNight">–</b><span>night sleep</span></div>
-      <div class="stat"><b id="sNap">–</b><span>nap</span></div>
-      <div class="stat"><b id="sTotal">–</b><span>total / 24h</span></div>
-    </div>
-    <ul class="notes" id="notes"></ul>
-    <div class="actual">
-      <div class="field">
-        <label for="lightsOut">Lights out at</label>
-        <div class="tin"><input type="time" id="lightsOut"><button type="button" class="btn" data-now="lightsOut">Now</button></div>
-      </div>
-      <div class="field">
-        <label for="actual">Fell asleep at</label>
-        <div class="tin"><input type="time" id="actual"><button type="button" class="btn" data-now="actual">Now</button></div>
-      </div>
-      <div class="chips">
-        <button type="button" class="chip" id="stallChip" aria-pressed="false">Stalling or calling out</button>
-        <button type="button" class="chip" id="offChip" aria-pressed="false">Sick or off night, don't count</button>
-      </div>
-      <div class="hint" id="tonightSummary"></div>
-      <div class="savebar">
-        <button type="button" class="btn primary" id="saveNight">Save tonight</button>
-        <span class="saved" id="savedNight" aria-live="polite"></span>
-      </div>
-    </div>
+    <h2>Today</h2>
+    <ol class="day">
+      <li class="step" id="stepNight0">
+        <button type="button" class="step-head" aria-expanded="false"><span class="st"></span><span class="nm">Last night<span class="sub"></span></span><span class="tm"></span><span class="chev" aria-hidden="true">›</span></button>
+        <div class="step-edit">
+          <div class="field">
+            <span class="flabel" id="nwLabel">Woke in the night</span>
+            <div class="stepper" role="group" aria-labelledby="nwLabel">
+              <button type="button" class="btn" id="nwMinus" aria-label="One fewer">−</button>
+              <span id="nwCount">0 times</span>
+              <button type="button" class="btn" id="nwPlus" aria-label="One more">+</button>
+            </div>
+            <div id="nwAwakeField" hidden style="margin-top:10px">
+              <label for="nightAwake">Roughly how long awake in total (min)</label>
+              <input type="number" id="nightAwake" min="0" max="300" step="5" placeholder="15">
+            </div>
+            <div class="hint" id="nwLogged" hidden></div>
+            <div class="chips" style="margin-top:8px"><button type="button" class="chip" id="snoreChip" aria-pressed="false">Snored or gasped</button></div>
+          </div>
+        </div>
+      </li>
+      <li class="step" id="stepWake">
+        <button type="button" class="step-head" aria-expanded="false"><span class="st"></span><span class="nm">Woke up<span class="sub"></span></span><span class="tm"></span><span class="chev" aria-hidden="true">›</span></button>
+        <div class="step-edit">
+          <div class="field">
+            <label for="wake">Woke up at</label>
+            <div class="tin"><input type="time" id="wake"><button type="button" class="btn" data-now="wake">Now</button></div>
+            <div class="hint" id="wakeHint"></div>
+          </div>
+          <div class="field">
+            <span class="flabel" id="moodLabel">How was she this morning?</span>
+            <div class="seg" role="group" aria-labelledby="moodLabel">
+              <button type="button" data-mood="happy">Happy</button>
+              <button type="button" data-mood="ok">OK</button>
+              <button type="button" data-mood="grumpy">Grumpy</button>
+            </div>
+            <div class="hint">Her mood in the morning is the best sign of whether last night was enough.</div>
+          </div>
+        </div>
+      </li>
+      <li class="step" id="stepNap">
+        <button type="button" class="step-head" aria-expanded="false"><span class="st"></span><span class="nm">Nap<span class="sub"></span></span><span class="tm"></span><span class="chev" aria-hidden="true">›</span></button>
+        <div class="step-edit">
+          <div class="field">
+            <div class="seg" role="group" aria-label="Nap">
+              <button type="button" data-nap="yes">Napped</button>
+              <button type="button" data-nap="now">Napping now</button>
+              <button type="button" data-nap="no">No nap</button>
+            </div>
+          </div>
+          <div id="napTimes">
+            <div class="field">
+              <label for="napStart">Nap start</label>
+              <div class="tin"><input type="time" id="napStart"><button type="button" class="btn" data-now="napStart">Now</button></div>
+            </div>
+            <div class="field" id="napEndField">
+              <label for="napEnd">Nap end</label>
+              <div class="tin"><input type="time" id="napEnd"><button type="button" class="btn" data-now="napEnd">Now</button></div>
+            </div>
+          </div>
+          <div class="wakeby" id="wakeBy" hidden>
+            <div class="lbl">Wake her by</div>
+            <div class="val" id="wakeByTime">–</div>
+            <p id="wakeByWhy"></p>
+            <button type="button" class="btn primary" id="sheIsUp">She's up now</button>
+          </div>
+        </div>
+      </li>
+      <li class="step plan" id="stepDinner" style="--c:var(--dinner)">
+        <div class="step-head"><span class="st"></span><span class="nm">Dinner, screens off<span class="sub" id="dDinner"></span></span><span class="tm" id="tDinner">–</span><span class="chev"></span></div>
+      </li>
+      <li class="step plan" id="stepDigest" style="--c:var(--screens)">
+        <div class="step-head"><span class="st"></span><span class="nm">Quiet time<span class="sub" id="dDigest"></span></span><span class="tm" id="tDigest">–</span><span class="chev"></span></div>
+      </li>
+      <li class="step plan" id="stepBath" style="--c:var(--bath)">
+        <div class="step-head"><span class="st"></span><span class="nm">Bath<span class="sub" id="dBath"></span></span><span class="tm" id="tBath">–</span><span class="chev"></span></div>
+      </li>
+      <li class="step plan" id="stepBooks" style="--c:var(--books)">
+        <div class="step-head"><span class="st"></span><span class="nm">Books<span class="sub" id="dBooks"></span></span><span class="tm" id="tBooks">–</span><span class="chev"></span></div>
+      </li>
+      <li class="step" id="stepLights" style="--c:var(--c-lights)">
+        <button type="button" class="step-head" aria-expanded="false"><span class="st"></span><span class="nm">Lights out<span class="sub" id="dSettle"></span></span><span class="tm" id="tLights">–</span><span class="chev" aria-hidden="true">›</span></button>
+        <div class="step-edit">
+          <div class="field">
+            <label for="lightsOut">Lights out at</label>
+            <div class="tin"><input type="time" id="lightsOut"><button type="button" class="btn" data-now="lightsOut">Now</button></div>
+          </div>
+          <div class="chips"><button type="button" class="chip" id="stallChip" aria-pressed="false">Stalling or calling out</button></div>
+        </div>
+      </li>
+      <li class="step" id="stepAsleep" style="--c:var(--c-asleep)">
+        <button type="button" class="step-head" aria-expanded="false"><span class="st"></span><span class="nm">Asleep<span class="sub"></span></span><span class="tm" id="tSleep">–</span><span class="chev" aria-hidden="true">›</span></button>
+        <div class="step-edit">
+          <div class="field">
+            <label for="actual">Fell asleep at</label>
+            <div class="tin"><input type="time" id="actual"><button type="button" class="btn" data-now="actual">Now</button></div>
+          </div>
+          <div class="chips"><button type="button" class="chip" id="offChip" aria-pressed="false">Sick or off night, don't count</button></div>
+        </div>
+      </li>
+      <li class="step" id="stepNightNow">
+        <button type="button" class="step-head" id="nightRow"><span class="st"></span><span class="nm">Overnight<span class="sub"></span></span><span class="tm"></span><span class="chev" aria-hidden="true">›</span></button>
+      </li>
+    </ol>
+    <p class="hint" id="tonightSummary"></p>
+    <p class="statline">Night sleep <b id="sNight">–</b> · nap <b id="sNap">–</b> · total <b id="sTotal">–</b></p>
+    <p class="hint" id="savedLine"></p>
   </section>
 
   <section class="card pat">
@@ -809,7 +848,8 @@ details.fold[open] > summary { margin-bottom: 12px; }
     plan = null;
     $("error").textContent = msg; $("error").hidden = false;
     $("asleepBy").textContent = "–"; $("heroLights").textContent = "–"; $("why").textContent = "";
-    ["planCard", "countdown", "nudgeBtns", "nudgeState", "otBox", "wakeBy", "lateWrap", "catchState"].forEach((id) => { $(id).hidden = true; });
+    ["countdown", "nudgeBtns", "nudgeState", "otBox", "wakeBy", "lateWrap", "catchState"].forEach((id) => { $(id).hidden = true; });
+    openStep(/nap/i.test(msg) ? "stepNap" : "stepWake");
   }
 
   function renderNudge() {
@@ -925,7 +965,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     const lb = lateBy(cur), st = settleOf(cur);
     if (lb !== null) tParts.push(lb >= LATE_LIGHTS ? `Lights out ${dur(lb)} after the planned ${fmt(plannedLightsOf(cur))}, so tonight won't be used to judge bedtime. Her settle time still counts.` : lb <= -5 ? `Lights out ${dur(lb)} early.` : "Lights out on time.");
     if (st !== null) tParts.push(`Settled in ${dur(st)}${st > 20 ? " (15–20 min is ideal)" : ""}.`);
-    $("tonightSummary").textContent = tParts.length ? tParts.join(" ") : "Logging both each night lets the planner learn her patterns.";
+    $("tonightSummary").textContent = tParts.length ? tParts.join(" ") : "";
 
     const night = r.tW - shown.asleep;
     $("sNight").textContent = dur(night);
@@ -941,7 +981,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     renderSide(p);
   }
 
-  function tick() { tickInner(); renderNow(); }
+  function tick() { tickInner(); renderNow(); renderDay(); }
   function tickInner() {
     const cd = $("countdown");
     if (!plan || activeDay() !== day) { cd.hidden = true; $("lateWrap").hidden = true; return; }
@@ -974,6 +1014,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     renderSaved();
     renderNightCard();
     renderNightBar();
+    renderDay();
     morningNightHint();
     renderChart();
     renderLog();
@@ -1345,7 +1386,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
   function renderNow() {
     const title = $("nowTitle"), text = $("nowText"), acts = $("nowActs"), extra = $("nowExtra");
     acts.innerHTML = ""; extra.innerHTML = ""; text.textContent = "";
-    const big = (label, fn) => { const b = el("button", "btn primary big", label); b.type = "button"; b.onclick = fn; acts.appendChild(b); return b; };
+    const big = (label, fn) => { const b = el("button", "btn primary lg", label); b.type = "button"; b.onclick = fn; acts.appendChild(b); return b; };
     const small = (label, fn, parent) => { const b = el("button", "btn", label); b.type = "button"; b.onclick = fn; (parent || acts).appendChild(b); return b; };
     const h = new Date().getHours(), n = nowEve();
     const open = state.openWake ? state.wakes.find((w) => w.id === state.openWake) : null;
@@ -1367,7 +1408,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
       text.textContent = "When did she wake up?";
       big("She woke up now", () => setWake(nowHHMM()));
       if (toMin(cur.wake) !== null) small(`She woke at ${fmt(toMin(cur.wake))}`, () => setWake(cur.wake));
-      small("A different time: edit below", () => { $("wake").scrollIntoView({ block: "center" }); $("wake").focus(); });
+      small("A different time", () => openStep("stepWake", "wake"));
       if (h < 6) small("She's awake in the night", openNight);
       return;
     }
@@ -1392,7 +1433,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
       text.textContent = "Tap when her nap starts, or if there's no nap today.";
       big("Nap started now", () => { cur.napMode = "now"; cur.napSet = true; cur.napStart = nowHHMM(); $("napStart").value = cur.napStart; calc(true); });
       small("No nap today", () => { cur.napMode = "no"; cur.napSet = true; calc(true); });
-      small("She already napped: enter times", () => { cur.napMode = "yes"; cur.napSet = true; calc(true); $("napStart").scrollIntoView({ block: "center" }); });
+      small("She already napped: enter times", () => { cur.napMode = "yes"; cur.napSet = true; calc(true); openStep("stepNap", "napStart"); });
       return;
     }
     if (!evening) {
@@ -1408,7 +1449,6 @@ details.fold[open] > summary { margin-bottom: 12px; }
         text.textContent = (cdText || `Lights out at ${fmt(plan.lights)}, asleep by ${fmt(plan.asleep)}.`) + stirHint;
         big("Lights out now", () => { cur.lightsOut = nowHHMM(); $("lightsOut").value = cur.lightsOut; calc(true); });
       }
-      if (!$("lateWrap").hidden) small("Running late? Catch-up options", () => $("lateWrap").scrollIntoView({ block: "center" }));
       if (n >= plan.asleep) small("She's awake in the night", openNight);
       return;
     }
@@ -1479,19 +1519,64 @@ details.fold[open] > summary { margin-bottom: 12px; }
   function setBadge(id, txt, hot) { const b = $(id); if (!b) return; b.textContent = txt || ""; b.hidden = !txt; b.className = "badge" + (hot ? " hot" : ""); }
 
   // ---------- save buttons ----------
-  function renderSaved(flash) {
-    const saved = !!state.log[day] && cur.savedAt;
-    const txt = saved ? `Saved at ${fmt(toMin(cur.savedAt))}. Changes save automatically too.` : "Not saved yet today.";
-    ["savedDay", "savedNight"].forEach((id) => { const e = $(id); e.textContent = (flash === id ? "✓ " : "") + txt; e.className = "saved" + (flash === id ? " ok" : ""); });
+  // ---------- Today: the whole day as one list ----------
+  function openStep(id, focusId) {
+    const li = $(id); if (!li) return;
+    li.classList.add("open");
+    const h = li.querySelector(".step-head"); if (h && h.tagName === "BUTTON") h.setAttribute("aria-expanded", "true");
+    li.scrollIntoView({ block: "center" });
+    if (focusId) $(focusId).focus();
   }
-  $("saveDay").addEventListener("click", () => {
-    if (!toMin(cur.wake) && toMin(cur.wake) !== 0) { $("savedDay").textContent = "Add her wake-up time first."; return; }
-    calc(true); renderSaved("savedDay");
+  document.querySelectorAll(".step-head").forEach((h) => {
+    if (h.tagName !== "BUTTON" || h.id === "nightRow") return;
+    h.addEventListener("click", () => {
+      const li = h.closest(".step"), open = !li.classList.contains("open");
+      li.classList.toggle("open", open); h.setAttribute("aria-expanded", String(open));
+    });
   });
-  $("saveNight").addEventListener("click", () => {
-    calc(true); renderSaved("savedNight");
-    if (!cur.lightsOut || !cur.actual) $("savedNight").textContent += " Add lights out and asleep times when you have them.";
-  });
+  $("nightRow").addEventListener("click", openNight);
+
+  function renderDay() {
+    const set = (id, st, time, sub) => {
+      const li = $(id); li.dataset.st = st;
+      if (time !== undefined) li.querySelector(".tm").textContent = time;
+      if (sub !== undefined) li.querySelector(".sub").textContent = sub;
+    };
+    const n = nowEve(), isToday = activeDay() === day;
+    // Last night
+    const ni = nightInfo(shiftKey(day, -1));
+    set("stepNight0", ni.count ? "done" : "plan", ni.count ? `${ni.count}×` : "", ni.count ? `Woke in the night${ni.awake ? `, ${dur(ni.awake)} awake` : ""}` : "Any night wakings? Tap to add");
+    // Woke up
+    const wakeDone = !!cur.wakeSet || !!cur.mood || (!!state.log[day] && toMin(cur.wake) !== null && cur.wake !== S.targetWake);
+    const moodTxt = cur.mood ? cur.mood[0].toUpperCase() + cur.mood.slice(1) : "Tap to add her mood";
+    set("stepWake", wakeDone ? "done" : "todo", wakeDone ? fmt(toMin(cur.wake)) : "–", wakeDone ? moodTxt : "Not logged yet");
+    // Nap
+    if (cur.napMode === "now") set("stepNap", "now", `${fmt(toMin(cur.napStart))}`, $("wakeBy").hidden ? "Napping now" : `Napping now · wake her by ${$("wakeByTime").textContent}`);
+    else if (cur.napMode === "no") set("stepNap", "done", "None", "No nap today");
+    else if (cur.napSet && toMin(cur.napStart) !== null && toMin(cur.napEnd) !== null) set("stepNap", "done", `${fmtShort(toMin(cur.napStart))}–${fmtShort(toMin(cur.napEnd))}`, dur(toMin(cur.napEnd) - toMin(cur.napStart)));
+    else set("stepNap", "todo", "–", "Not logged yet");
+    // Routine
+    if (!plan) { ["stepDinner", "stepDigest", "stepBath", "stepBooks", "stepLights", "stepAsleep"].forEach((id) => set(id, "plan")); return; }
+    const phase = (start, end) => (!isToday ? "plan" : n >= end ? "past" : n >= start ? "now" : "plan");
+    set("stepDinner", phase(plan.dinnerStart, plan.digestStart));
+    set("stepDigest", phase(plan.digestStart, plan.bathStart));
+    set("stepBath", phase(plan.bathStart, plan.booksStart));
+    set("stepBooks", cur.lightsOut ? "past" : phase(plan.booksStart, plan.lights));
+    const lo = eveMin(cur.lightsOut), as = eveMin(cur.actual);
+    if (lo !== null) set("stepLights", "done", fmt(lo), `Planned ${fmt(plan.lights)}` + (cur.stall ? " · stalling" : ""));
+    else set("stepLights", isToday && n >= plan.lights ? "now" : "plan", fmt(plan.lights), `Planned · ${+S.settle || 0} min to settle`);
+    if (as !== null) set("stepAsleep", "done", fmt(as), (lo !== null && as >= lo ? `Settled in ${dur(as - lo)} · ` : "") + `planned ${fmt(plan.asleep)}` + (cur.off ? " · off night" : ""));
+    else set("stepAsleep", lo !== null ? "now" : "plan", fmt(plan.asleep), lo !== null ? "Settling. Tap when she's asleep" : "Planned");
+    // Overnight
+    const tonight = wakesFor(day);
+    const open = state.openWake ? state.wakes.find((w) => w.id === state.openWake) : null;
+    set("stepNightNow", open ? "now" : tonight.length ? "done" : "plan", tonight.length ? `${tonight.length}×` : "",
+      open ? `Awake since ${fmt(toMin(open.t))}. Tap to open` : tonight.length ? `Woke at ${tonight.map((w) => fmt(toMin(w.t))).join(", ")}` : "If she wakes, tap here");
+  }
+  function renderSaved() {
+    const saved = !!state.log[day] && cur.savedAt;
+    $("savedLine").textContent = saved ? `Saved automatically, last at ${fmt(toMin(cur.savedAt))}.` : "Saves automatically as you tap.";
+  }
 
   // ---------- backup ----------
   const HHMM = /^\d{2}:\d{2}$/, DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -1586,6 +1671,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     calc(true);
   }));
   $("sheIsUp").addEventListener("click", () => { cur.napMode = "yes"; cur.napSet = true; cur.napEnd = nowHHMM(); $("napEnd").value = cur.napEnd; calc(true); });
+  $("lateToggle").addEventListener("click", () => { const o = $("lateBtns").hidden; $("lateBtns").hidden = !o; $("lateToggle").setAttribute("aria-expanded", String(o)); });
   $("lateDinner").addEventListener("click", () => { cur.startedAt = nowHHMM(); cur.startedStep = "dinner"; calc(true); });
   $("lateBath").addEventListener("click", () => { cur.startedAt = nowHHMM(); cur.startedStep = "bath"; calc(true); });
   $("tired").addEventListener("click", () => { cur.wiredOT = ""; cur.nudge = Math.max(-60, (cur.nudge || 0) - 15); calc(true); });
