@@ -211,13 +211,18 @@ details.fold:not([open]) > summary::after { transform: rotate(-90deg); }
 details.fold[open] > summary { margin-bottom: 12px; }
 .badge { font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .badge.hot { background: var(--accent); color: var(--surface); }
+input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); -webkit-appearance: none; appearance: none; }
+.setup { position: fixed; inset: 0; z-index: 60; background: var(--bg); overflow-y: auto; }
+.setup-inner { max-width: 520px; margin: 0 auto; padding: 32px 16px 48px; }
+.setup h2 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
+#suPreview { margin: 4px 0 18px; font-size: 15px; color: var(--text); }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Bedtime planner</h1>
+  <h1 id="pageTitle">Bedtime planner</h1>
 
   <section class="card hero" id="nowCard" aria-live="polite">
     <div class="pair">
@@ -319,7 +324,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
             </div>
           </div>
           <div class="wakeby" id="wakeBy" hidden>
-            <div class="lbl">Wake her by</div>
+            <div class="lbl">Wake her~ by</div>
             <div class="val" id="wakeByTime">–</div>
             <p id="wakeByWhy"></p>
             <button type="button" class="btn primary" id="sheIsUp">She's up now</button>
@@ -418,6 +423,16 @@ details.fold[open] > summary { margin-bottom: 12px; }
   <section class="card">
     <details>
       <summary>Settings</summary>
+      <h3 class="set-h">Your child</h3>
+      <div class="field"><label for="childName">Name (optional)</label><input type="text" id="childName" maxlength="30" autocomplete="off" placeholder="e.g. Mia"></div>
+      <div class="field">
+        <span class="flabel" id="prLabel">Words to use</span>
+        <div class="seg" role="group" aria-labelledby="prLabel">
+          <button type="button" data-pr="she">She / her</button>
+          <button type="button" data-pr="he">He / his</button>
+          <button type="button" data-pr="they">They / their</button>
+        </div>
+      </div>
       <h3 class="set-h">Her sleep</h3>
       <div class="row">
         <div class="field"><label for="birthMonth">Birth month</label><input type="month" id="birthMonth"></div>
@@ -460,7 +475,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
         <li><strong>Late nap:</strong> she needs about 5 hours awake after a nap, so a late nap pushes bedtime later.</li>
       </ul>
       <p>It always stays within 30 minutes of the setting, and never before 6:00pm. Tired and Wired can move one night by up to 45 minutes.</p>
-      <p><strong>Wake her by</strong> is the earlier of her usual nap length and 5 hours before her usual bedtime.</p>
+      <p><strong>Wake her~ by</strong> is the earlier of her usual nap length and 5 hours before her usual bedtime.</p>
       <p><strong>Wired.</strong> A toddler who's wired at bedtime is often overtired, not undertired. After no nap, a nap under 45 minutes, or more than 5h 30m awake, the planner suggests keeping bedtime and calming things down instead of moving it later. After a decent nap, Wired moves bedtime 15 minutes later.</p>
       <p><strong>How far it moves.</strong> Tonight's bedtime never moves more than 45 minutes from her usual bedtime, whatever the naps and Tired or Wired taps add up to.</p>
       <p><strong>Learning her patterns.</strong> The planner uses up to 14 recent nights since her usual bedtime last changed. It leaves out late nights (lights out 15+ minutes after the plan) and nights marked sick or off. It looks at:</p>
@@ -470,16 +485,40 @@ details.fold[open] > summary { margin-bottom: 12px; }
         <li><strong>Early waking</strong> (before 6:00am). 6–7am is normal at this age. Regularly waking before 6 usually means bedtime is too late.</li>
         <li><strong>Night wakings and morning mood.</strong> Regular night wakings or grumpy mornings suggest she needs more sleep. Her total sleep before happy mornings, minus time awake in the night, shows what she really needs.</li>
       </ul>
-      <p><strong>4-night trials.</strong> A suggested change runs as a 4-night trial, because it takes a few nights for her to adjust. During the trial nothing else changes. Afterwards the planner compares the trial nights with the nights before, and you decide whether to keep it or go back.</p>
+      <p><strong>4-night trials.</strong> A suggested change runs as a 4-night trial, because it takes a few nights for her~ to adjust. During the trial nothing else changes. Afterwards the planner compares the trial nights with the nights before, and you decide whether to keep it or go back.</p>
       <p><strong>Bedtime fading.</strong> For long settling, lights out moves to when she's usually falling asleep anyway, so she drops off quickly. Then, every 4 nights, if she's settling in 20 minutes or less, it moves 15 minutes earlier until it's back at her original bedtime.</p>
       <p><strong>Ready to drop the nap?</strong> If she settles 15 minutes or more faster on no-nap days, the planner suggests trying quiet time instead. Long settling together with early waking or grumpy mornings usually means too much daytime sleep.</p>
       <p><strong>Night wakings.</strong> Tap "She's awake" when she wakes. A dim screen records the time and asks why she woke and what you did, then "She's back asleep" records how long she was awake. After 5 nights, the planner looks for the cause. It checks whether she mostly wants you (especially if one of you stays or she comes into your bed), wakes at the same time each night, has night terrors, needs the toilet, is scared, or wakes more after late nights. It then suggests a 10-night plan with a short script for the night screen, so whoever gets up responds the same way. Nights 2–4 are often worse before they get better. A star is earned for each night in her own bed. Frequent night terrors or regular snoring are flagged as worth raising with your GP.</p>
-      <p><strong>Always running late?</strong> If lights out is 15+ minutes late on 6 of the last 10 nights, the planner checks the mornings after. If she slept in and was mostly happy, it suggests a later day as a 4-night trial: a later wake-up and bedtime, no later than your latest wake-up for daycare days. If she still woke at her usual time, a later schedule would cost her sleep, so it suggests ways to make the evening fit instead, including a shorter routine (quiet time and bath no shorter than 15 minutes, books no shorter than 20).</p>
+      <p><strong>Always running late?</strong> If lights out is 15+ minutes late on 6 of the last 10 nights, the planner checks the mornings after. If she slept in and was mostly happy, it suggests a later day as a 4-night trial: a later wake-up and bedtime, no later than your latest wake-up for daycare days. If she still woke at her usual time, a later schedule would cost her~ sleep, so it suggests ways to make the evening fit instead, including a shorter routine (quiet time and bath no shorter than 15 minutes, books no shorter than 20).</p>
       <p><strong>The routine.</strong> It starts at dinner (screens off), then quiet time to digest, then bath, books and lights out. The planner works back from the asleep-by time to tell you when to start dinner.</p>
       <p><strong>Catch-up routine.</strong> If you're late, tap "Starting dinner now" or "Starting bath now". Quiet time is cut down to 15 minutes, then dinner to 30, books to 15 and the bath to 10, keeping the same order, to get lights out as close to the plan as possible. If she's also wired after a good nap, each Wired tap still adds 15 minutes of books.</p>
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. Awake times, settle times and the early-waking signs are common advice from sleep consultants, not official guidelines. This is a guide only. Your child's own cues come first.</p>
     </details>
   </section>
+</div>
+
+<div class="setup" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+  <div class="setup-inner">
+    <h2 id="setupTitle">Welcome</h2>
+    <p class="sub">A few details to plan your child's day. You can change any of them later in Settings.</p>
+    <div class="field"><label for="suName">Child's name (optional)</label><input type="text" id="suName" maxlength="30" autocomplete="off" placeholder="e.g. Mia"></div>
+    <div class="field">
+      <span class="flabel" id="suPrLabel">Words to use</span>
+      <div class="seg" role="group" aria-labelledby="suPrLabel">
+        <button type="button" data-supr="she" aria-pressed="true">She / her</button>
+        <button type="button" data-supr="he" aria-pressed="false">He / his</button>
+        <button type="button" data-supr="they" aria-pressed="false">They / their</button>
+      </div>
+    </div>
+    <div class="field"><label for="suBirth">Birth month</label><input type="month" id="suBirth"></div>
+    <div class="row">
+      <div class="field"><label for="suWake">Usual wake-up</label><input type="time" id="suWake" value="07:00"></div>
+      <div class="field"><label for="suNap">Usual nap (min)</label><input type="number" id="suNap" value="60" min="0" max="180" step="15"></div>
+    </div>
+    <p class="hint" id="suPreview"></p>
+    <button type="button" class="btn primary lg" id="suStart">Start</button>
+    <button type="button" class="linkbtn" id="suSkip" style="display:block;margin:14px auto 0">Skip for now</button>
+  </div>
 </div>
 
 <div class="nightmode" id="nightMode" hidden role="dialog" aria-modal="true" aria-labelledby="nmTitle">
@@ -546,8 +585,16 @@ details.fold[open] > summary { margin-bottom: 12px; }
   function load() {
     let s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+    const hadV1 = ["bathMin", "booksMin", "settleMin", "wake"].some((k) => { try { return localStorage.getItem("sleep." + k) !== null; } catch (e) { return false; } });
+    const fresh = (!s || typeof s !== "object") && !hadV1;
     if (!s || typeof s !== "object") s = {};
-    s.settings = Object.assign({ targetWake: "06:45", bath: 20, books: 30, settle: 30, latestWake: "07:15", dinner: 40, digest: 20, stdNap: 90, birthMonth: "" }, s.settings || {});
+    // Existing phones keep the defaults they were set up with; new families get neutral ones and a setup screen.
+    const defaults = fresh
+      ? { targetWake: "07:00", anchorBed: "20:00", bath: 20, books: 20, settle: 15, latestWake: "07:30", dinner: 30, digest: 15, stdNap: 60, birthMonth: "", pronoun: "she", childName: "" }
+      : { targetWake: "06:45", bath: 20, books: 30, settle: 30, latestWake: "07:15", dinner: 40, digest: 20, stdNap: 90, birthMonth: "", pronoun: "she", childName: "" };
+    s.settings = Object.assign(defaults, s.settings || {});
+    if (fresh) { s.migrated = true; s.settle30 = true; s.setupDone = false; }
+    else if (s.setupDone === undefined) s.setupDone = true;
     if (!s.settings.anchorBed) s.settings.anchorBed = s.settings.latestBed || "20:00";
     delete s.settings.latestBed; delete s.settings.adapt; delete s.settings.shift; delete s.settings.need;
     s.log = s.log && typeof s.log === "object" ? s.log : {};
@@ -569,7 +616,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
   function draft() {
     const keys = Object.keys(state.log).sort();
     const last = keys.length ? state.log[keys[keys.length - 1]] : null;
-    return { wake: S.targetWake, mood: "", napMode: "yes", napStart: (last && last.napStart) || "12:30", napEnd: (last && last.napEnd) || "14:00", nudge: 0, actual: "", lightsOut: "", nightWakes: 0 };
+    return { wake: S.targetWake, mood: "", napMode: "yes", napStart: (last && last.napStart) || "12:30", napEnd: (last && last.napEnd) || ((m) => pad(Math.floor(m / 60)) + ":" + pad(m % 60))(750 + (stdNap() || 60)), nudge: 0, actual: "", lightsOut: "", nightWakes: 0 };
   }
   const commit = () => { cur.savedAt = nowHHMM(); state.log[day] = Object.assign({}, cur); save(); };
 
@@ -625,7 +672,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
       notes.push("Moved to 6:00pm, the earliest bedtime this planner suggests. If she's falling apart, a little earlier is fine.");
     }
     if (e.napMode === "yes" && usual && napLen > usual + 15) notes.push(`The nap was ${dur(napLen)}, longer than her usual ${dur(usual)}.`);
-    if (e.napMode === "yes" && napEnd > LATE_NAP_END) notes.push("The nap ended after 3:30pm. Late naps push bedtime back more than long ones, so try to have her up by about 3pm.");
+    if (e.napMode === "yes" && napEnd > LATE_NAP_END) notes.push("The nap ended after 3:30pm. Late naps push bedtime back more than long ones, so try to have her~ up by about 3pm.");
     return { base, why, notes, napLen, napped: napStart !== null, tW, wakeBy, wakeByWhy };
   }
 
@@ -720,7 +767,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
       return { kind: "fade", delta, text: `She takes about ${dur(round5(p.settle))} to settle. Try bedtime fading: lights out at about ${fmt(typAsleep)}, when she's usually falling asleep anyway, so she drops off quickly. Then every ${TRIAL_NIGHTS} nights, if she's settling in 20 minutes or less, bring it 15 minutes earlier until you're back where you started.` };
     }
     if (fastSettle) return { kind: "earlier", delta: -15, text: `She's dropping off in under 10 minutes. That can mean she's overtired by lights out. Try bedtime 15 minutes earlier for ${TRIAL_NIGHTS} nights.` };
-    return { kind: "ok", text: "Settling, nights and mornings all look good. The plan suits her." };
+    return { kind: "ok", text: "Settling, nights and mornings all look good. The plan suits her~." };
   }
 
   // ---------- always running late? ----------
@@ -746,19 +793,19 @@ details.fold[open] > summary { margin-bottom: 12px; }
     const L = lateness();
     if (L.n < 6 || L.lateN / L.n < 0.6) return false;
     const head = `You've been running late on ${L.lateN} of the last ${L.n} nights, by about ${dur(L.med)}.`;
-    if (L.mornings < 3) { para(head + " Keep logging her wake-ups and mornings to see whether a later schedule would suit her.", "rec"); return true; }
+    if (L.mornings < 3) { para(head + " Keep logging her wake-ups and mornings to see whether a later schedule would suit her~.", "rec"); return true; }
     const tgt = toMin(S.targetWake), latest = toMin(S.latestWake || "07:15");
     const room = Math.floor((latest - tgt) / 15) * 15;
     const by = Math.min(Math.max(15, Math.round(L.med / 15) * 15), room);
     const copes = L.sleptIn / L.mornings >= 0.6 && L.grumpy / L.mornings <= 0.34;
     if (copes && by >= 15) {
-      para(`${head} After those nights she slept in on ${L.sleptIn} of ${L.mornings} mornings and was mostly happy, so a later day may suit her. Try waking at ${fmt(tgt + by)} with bedtime ${by} minutes later, for ${TRIAL_NIGHTS} nights.`, "rec");
+      para(`${head} After those nights she slept in on ${L.sleptIn} of ${L.mornings} mornings and was mostly happy, so a later day may suit her~. Try waking at ${fmt(tgt + by)} with bedtime ${by} minutes later, for ${TRIAL_NIGHTS} nights.`, "rec");
       button(`Start a ${TRIAL_NIGHTS}-night trial: wake ${fmt(tgt + by)}`, () => startTrial("later", by));
       return true;
     }
     para(head + (copes
       ? ` She does sleep in after late nights, but there's no room before your latest wake-up (${fmt(latest)}), so it's better to make the evening fit:`
-      : ` After those nights she still woke around her usual time (slept in on only ${L.sleptIn} of ${L.mornings} mornings), so a later schedule would just cost her sleep. Better to make the evening fit:`), "rec");
+      : ` After those nights she still woke around her usual time (slept in on only ${L.sleptIn} of ${L.mornings} mornings), so a later schedule would just cost her~ sleep. Better to make the evening fit:`), "rec");
     const tips = el("ul"); tips.style.cssText = "margin:0 0 10px;padding-left:18px;font-size:14px";
     const tip = (t) => tips.appendChild(el("li", null, t));
     if (plan) tip(`Start dinner by ${fmt(plan.origDinner)}. Something quick or made ahead on busy nights helps.`);
@@ -864,10 +911,11 @@ details.fold[open] > summary { margin-bottom: 12px; }
   // ---------- sleep amount, linked times, and age ----------
   const nightLen = () => ((toMin(S.targetWake) - toMin(S.anchorBed)) % 1440 + 1440) % 1440;
   const totalSleep = () => nightLen() + stdNap();
-  function ageMonths() {
-    const m = /^(\d{4})-(\d{2})$/.exec(S.birthMonth || ""); if (!m) return null;
-    const now = new Date(); return (now.getFullYear() - +m[1]) * 12 + (now.getMonth() + 1 - +m[2]);
+  function ageFrom(bm) {
+    const m = /^(\d{4})-(\d{2})$/.exec(bm || ""); if (!m) return null;
+    const now = new Date(); return Math.max(0, (now.getFullYear() - +m[1]) * 12 + (now.getMonth() + 1 - +m[2]));
   }
+  const ageMonths = () => ageFrom(S.birthMonth);
   // Ranges from the American Academy of Sleep Medicine (per 24h, naps included); the middle figure
   // follows NHS-style guidance by year (about 12h at 3, a little less each year after).
   function recSleep(months) {
@@ -1042,7 +1090,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     $("sTotal").textContent = dur(night + r.napLen);
 
     const notes = r.notes.slice();
-    if (shown.asleep > LATE_BED) notes.push("That's a late bedtime for a 3-year-old. Expect her to be tired tomorrow, and keep the nap earlier.");
+    if (shown.asleep > LATE_BED) notes.push("That's a late bedtime for a 3-year-old. Expect her~ to be tired tomorrow, and keep the nap earlier.");
     $("notes").innerHTML = "";
     notes.forEach((n) => $("notes").appendChild(el("li", null, n)));
 
@@ -1116,7 +1164,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     if (p.napDiff !== null && !(rec && rec.kind === "nap")) {
       const diff = p.napDiff;
       if (diff >= 15) para(`She settles about ${dur(round5(diff))} faster on no-nap days. She may be ready to swap the nap for quiet time. Worth raising with daycare.`, "rec");
-      else para(`She settles about the same on nap and no-nap days (${signed(round5(diff))}), so the nap still seems to suit her.`, "muted");
+      else para(`She settles about the same on nap and no-nap days (${signed(round5(diff))}), so the nap still seems to suit her~.`, "muted");
     }
 
     if (p.happyTotals.length >= MIN_N) {
@@ -1260,11 +1308,11 @@ details.fold[open] > summary { margin-bottom: 12px; }
   const PLAN_NIGHTS = 10;
   const PLAN_TITLE = { settle: "Settling on her own", terror: "Night terrors", habit: "Same-time wakings", toilet: "Toilet and drinks", scared: "Nightmares and fears", general: "Night-time basics" };
   const SCRIPTS = {
-    settle: "Walk her back to bed calmly. Say your line: \"It's sleep time. I love you. Goodnight.\" Then leave. Keep it short and boring: no chatting, no lights, no lying down.",
-    terror: "Don't wake her or talk to her. Stay close, keep her safe, and stay calm and quiet. It passes in a few minutes, and she won't remember it.",
+    settle: "Walk her~ back to bed calmly. Say your line: \"It's sleep time. I love you. Goodnight.\" Then leave. Keep it short and boring: no chatting, no lights, no lying down.",
+    terror: "Don't wake her~ or talk to her~. Stay close, keep her~ safe, and stay calm and quiet. It passes in a few minutes, and she won't remember it.",
     habit: "Keep it short and boring: check she's OK, say your goodnight line, and leave. Same response every time.",
     toilet: "Toilet in dim light with no chatting, then straight back to bed with your goodnight line.",
-    scared: "Comfort her in her own room with the light dim. Tell her she's safe and you're close by, give her her comfort toy, then leave.",
+    scared: "Comfort her~ in her own room with the light dim. Tell her~ she's safe and you're close by, give her~ her comfort toy, then leave.",
     general: "Keep the light dim and your voice quiet. Check she's OK, a quick cuddle, your goodnight line, then leave."
   };
   if (!Array.isArray(state.wakes)) state.wakes = [];
@@ -1303,14 +1351,14 @@ details.fold[open] > summary { margin-bottom: 12px; }
     if (A.wakeNights / A.nights < 0.3) return { text: `She woke on ${A.wakeNights} of ${A.nights} nights. Occasional wakings are normal at 3, so there's nothing to fix.` };
     const n = A.detailed.length, c = (k) => A.cause[k] || 0, r = (k) => A.resp[k] || 0;
     if (n < 3) return { text: `She's waking on ${A.wakeNights} of ${A.nights} nights. Tap "She's awake" when it happens to log why she woke and what you did, so the planner can suggest a plan.` };
-    if (c("unwell") / n >= 0.4) return { text: "Most wakings were while she was unwell. Comfort her as much as she needs, and start a plan once she's well again." };
+    if (c("unwell") / n >= 0.4) return { text: "Most wakings were while she was unwell. Comfort her~ as much as she needs, and start a plan once she's well again." };
     if (c("terror") >= 2) {
       const tt = A.detailed.filter((w) => w.cause === "terror").map((w) => eveMin(w.t));
       const m = median(tt), same = tt.filter((v) => Math.abs(v - m) <= 30).length / tt.length >= 0.6;
       return { kind: "terror", stir: same ? round5(m) - 20 : null, text: (same ? `They happen around ${fmt(round5(m))}. ` : "") + `She's had ${c("terror")} night terrors (screaming or upset but not really awake). They usually come 1–3 hours after falling asleep and are linked to overtiredness. She won't remember them.` };
     }
     const assoc = (r("stayed") + r("ourbed")) / n;
-    if (c("company") / n >= 0.4 || assoc >= 0.5) return { kind: "settle", text: "She mostly wakes wanting you" + (assoc >= 0.5 ? ", and most nights one of you stays with her or she comes into your bed" : "") + ". That's the most common cause at 3: she needs at 2am whatever helped her fall asleep at bedtime. The fix is teaching her to fall asleep without you, at bedtime first." };
+    if (c("company") / n >= 0.4 || assoc >= 0.5) return { kind: "settle", text: "She mostly wakes wanting you" + (assoc >= 0.5 ? ", and most nights one of you stays with her~ or she comes into your bed" : "") + ". That's the most common cause at 3: she needs at 2am whatever helped her~ fall asleep at bedtime. The fix is teaching her~ to fall asleep without you, at bedtime first." };
     if (A.sameTime !== undefined) return { kind: "habit", text: `Her wakings cluster around ${fmt(A.sameTime)}. Same-time wakings are often a habit her body has learned, and a short run of "scheduled waking" can reset it.` };
     if (c("toilet") / n >= 0.4) return { kind: "toilet", text: "Most wakings are for the toilet or a drink. That's mostly fixed in the evening routine." };
     if (c("scared") / n >= 0.4) return { kind: "scared", text: "Most wakings are fears or nightmares, which are very common at 3 as her imagination grows. The fixes are mostly in the daytime." };
@@ -1320,15 +1368,15 @@ details.fold[open] > summary { margin-bottom: 12px; }
   function planSteps(kind, stir) {
     const lightsT = plan ? plan.origLights : null;
     const stirLine = (days) => stir != null
-      ? `Scheduled waking: at about ${fmt(stir)}, gently stir her (until she moves or mumbles), then let her drift back. Every night${days ? ` for ${days} nights` : ""}.`
-      : "If they happen at a similar time, gently stir her 15–30 minutes before that time each night.";
+      ? `Scheduled waking: at about ${fmt(stir)}, gently stir her~ (until she moves or mumbles), then let her~ drift back. Every night${days ? ` for ${days} nights` : ""}.`
+      : "If they happen at a similar time, gently stir her~ 15–30 minutes before that time each night.";
     switch (kind) {
       case "settle": return [
-        "At bedtime, say goodnight and leave before she's asleep. If she calls out, check in briefly after 2 minutes, then 5, then 10. Falling asleep without you at bedtime is what lets her do it again at 2am.",
+        "At bedtime, say goodnight and leave before she's asleep. If she calls out, check in briefly after 2 minutes, then 5, then 10. Falling asleep without you at bedtime is what lets her~ do it again at 2am.",
         "At night, give the same short response every time (it's on the night screen). No lying down, and no coming into your bed.",
         "A sticker in the morning when she stays in her own bed all night."];
       case "terror": return [stirLine(7),
-        "During a terror, don't wake her or talk to her. Keep her safe and wait. It passes in a few minutes.",
+        "During a terror, don't wake her~ or talk to her~. Keep her safe and wait. It passes in a few minutes.",
         "Overtiredness triggers terrors, so keep bedtime on time, or try it a little earlier."];
       case "habit": return [stirLine(7) + " Then stop.",
         "If she wakes anyway, give the same short, boring response each time.",
@@ -1340,8 +1388,8 @@ details.fold[open] > summary { margin-bottom: 12px; }
         "A sticker for taking herself to the toilet and back to bed."];
       case "scared": return [
         "No scary shows, books or games, especially in the afternoon and evening.",
-        "Talk about the dream the next day, not in the middle of the night. A comfort toy or \"monster spray\" helps her feel in control.",
-        "A dim, warm night light. At night, comfort her in her room, then leave."];
+        "Talk about the dream the next day, not in the middle of the night. A comfort toy or \"monster spray\" helps her~ feel in control.",
+        "A dim, warm night light. At night, comfort her~ in her room, then leave."];
       default: return [
         "Room cool (18–20°C), dark and quiet. White noise helps.",
         "A comfort toy, and the same goodnight line every night.",
@@ -1403,7 +1451,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     box.appendChild(stepList(planSteps(NP.kind, NP.stir)));
     if (n >= 1 && n <= 5 && day < due) para("Nights 2–4 are often worse before they get better. That's normal, and usually means it's working. Stick with it.", "muted");
     if (during.nights) para(`Wakings a night: ${before.nights ? before.avg.toFixed(1) + " before → " : ""}${during.avg.toFixed(1)} during the plan (${during.nights} ${during.nights === 1 ? "night" : "nights"}).`);
-    if (stars) { const s = el("p", "stars"); s.textContent = "★".repeat(Math.min(stars, 14)); s.setAttribute("aria-label", `${stars} stars`); box.appendChild(s); para(`${stars} ${stars === 1 ? "night" : "nights"} in her own bed. Let her stick a star on her chart each morning.`, "muted"); }
+    if (stars) { const s = el("p", "stars"); s.textContent = "★".repeat(Math.min(stars, 14)); s.setAttribute("aria-label", `${stars} stars`); box.appendChild(s); para(`${stars} ${stars === 1 ? "night" : "nights"} in her own bed. Let her~ stick a star on her chart each morning.`, "muted"); }
     if (day >= due) {
       const b = before.avg, d = during.avg;
       para(!during.nights ? "Not enough logged during the plan to tell." : d === 0 ? "No wakings during the plan. Well done!" : b && d <= b * 0.5 ? "Big improvement. Keep the same habits going." : b && d < b ? "Improving. Keep going with the same response, as these changes can take 2–3 weeks." : "No change yet. Try another 5 nights, or a different plan.");
@@ -1465,7 +1513,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     const napDone = !!cur.napSet || cur.napMode === "no";
     const morning = h >= 4 && h < 12 && activeDay() === day;
     const NPs = state.nightPlan;
-    const stirHint = NPs && NPs.stir != null && NPs.start <= nightKeyNow() ? ` Night plan: stir her at about ${fmt(NPs.stir)}.` : "";
+    const stirHint = NPs && NPs.stir != null && NPs.start <= nightKeyNow() ? ` Night plan: stir her~ at about ${fmt(NPs.stir)}.` : "";
 
     if (open) {
       title.textContent = "She's awake";
@@ -1493,7 +1541,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     if (!plan) { title.textContent = "Today"; text.textContent = "Check the times in the Today card below."; return; }
     if (cur.napMode === "now") {
       title.textContent = "Napping";
-      text.textContent = `Asleep since ${fmt(toMin(cur.napStart))}.` + ($("wakeBy").hidden ? "" : ` Wake her by ${$("wakeByTime").textContent}.`);
+      text.textContent = `Asleep since ${fmt(toMin(cur.napStart))}.` + ($("wakeBy").hidden ? "" : ` Wake her~ by ${$("wakeByTime").textContent}.`);
       big("Nap ended now", () => { cur.napMode = "yes"; cur.napSet = true; cur.napEnd = nowHHMM(); $("napEnd").value = cur.napEnd; calc(true); });
       return;
     }
@@ -1619,7 +1667,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     const moodTxt = cur.mood ? { happy: "Happy", ok: "OK", grumpy: "Grumpy" }[cur.mood] : "Tap to add her mood";
     set("stepWake", wakeDone ? "done" : "todo", wakeDone ? fmt(toMin(cur.wake)) : "–", wakeDone ? moodTxt : "Not logged yet");
     // Nap
-    if (cur.napMode === "now") set("stepNap", "now", `${fmt(toMin(cur.napStart))}`, $("wakeBy").hidden ? "Napping now" : `Napping now · wake her by ${$("wakeByTime").textContent}`);
+    if (cur.napMode === "now") set("stepNap", "now", `${fmt(toMin(cur.napStart))}`, $("wakeBy").hidden ? "Napping now" : `Napping now · wake her~ by ${$("wakeByTime").textContent}`);
     else if (cur.napMode === "no") set("stepNap", "done", "None", "No nap today");
     else if (cur.napSet && toMin(cur.napStart) !== null && toMin(cur.napEnd) !== null) set("stepNap", "done", `${fmtShort(toMin(cur.napStart))}–${fmtShort(toMin(cur.napEnd))}`, dur(toMin(cur.napEnd) - toMin(cur.napStart)));
     else set("stepNap", "todo", "–", "Not logged yet");
@@ -1712,6 +1760,9 @@ details.fold[open] > summary { margin-bottom: 12px; }
     if (wasEmpty && data.settings && typeof data.settings === "object") {
       const d = data.settings;
       ["targetWake", "anchorBed", "latestWake"].forEach((f) => { if (typeof d[f] === "string" && HHMM.test(d[f])) S[f] = d[f]; });
+      if (typeof d.childName === "string") S.childName = d.childName.slice(0, 30);
+      if (["she", "he", "they"].includes(d.pronoun)) S.pronoun = d.pronoun;
+      state.setupDone = true;
       if (typeof d.birthMonth === "string" && /^\d{4}-\d{2}$/.test(d.birthMonth)) S.birthMonth = d.birthMonth;
       if (typeof d.stdNap === "number" && d.stdNap >= 0 && d.stdNap <= 180) S.stdNap = d.stdNap;
       ["dinner", "digest", "bath", "books", "settle"].forEach((f) => { if (typeof d[f] === "number" && d[f] >= 0 && d[f] <= 900) S[f] = d[f]; });
@@ -1777,6 +1828,72 @@ details.fold[open] > summary { margin-bottom: 12px; }
 
   setInterval(tick, 30000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { if (activeDay() !== day) location.reload(); else tick(); } });
+
+  // ---------- her / his / their: wording follows the child's name and pronoun ----------
+  // Page text is written as "she/her"; "her~" marks "her" used as an object ("wake her").
+  // For "they" the child's name stands in as the subject, so verbs stay singular ("Mia wakes").
+  function personalize(t) {
+    if (!t || !/\b(she|her|herself)\b|her~/i.test(t)) return t;
+    const p = S.pronoun === "he" || S.pronoun === "they" ? S.pronoun : "she";
+    if (p === "she") return t.replace(/her~/g, "her");
+    const name = (S.childName || "").trim();
+    const subj = p === "he" ? "he" : name || "your child";
+    const cap = (w) => (/^[a-z]/.test(w) ? w[0].toUpperCase() + w.slice(1) : w);
+    const forms = p === "he" ? { obj: "him", poss: "his", refl: "himself" } : { obj: "them", poss: "their", refl: "themselves" };
+    const keepCase = (m, w) => (/^[A-Z]/.test(m) ? cap(w) : w);
+    return t
+      .replace(/\b(her)~/gi, (m) => keepCase(m, forms.obj))
+      .replace(/\bherself\b/gi, (m) => keepCase(m, forms.refl))
+      .replace(/\bshe(['’])(s|d|ll)\b/gi, (m, q, x) => keepCase(m, subj) + q + x)
+      .replace(/\bshe\b/gi, (m) => keepCase(m, subj))
+      .replace(/\bher\b/gi, (m) => keepCase(m, forms.poss));
+  }
+  function fixNode(n) {
+    if (n.nodeType === 3) { const v = personalize(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
+    else if (n.nodeType === 1 && !/^(SCRIPT|STYLE|INPUT|TEXTAREA|SELECT)$/.test(n.tagName)) {
+      n.childNodes.forEach(fixNode);
+      ["aria-label", "title"].forEach((a) => { if (n.hasAttribute(a)) { const v = personalize(n.getAttribute(a)); if (v !== n.getAttribute(a)) n.setAttribute(a, v); } });
+    }
+  }
+  fixNode(document.body);
+  new MutationObserver((ms) => ms.forEach((m) => { if (m.type === "characterData") fixNode(m.target); else m.addedNodes.forEach(fixNode); }))
+    .observe(document.body, { subtree: true, childList: true, characterData: true });
+  const nameNow = () => (S.childName || "").trim();
+  if (nameNow()) { $("pageTitle").textContent = `${nameNow()}'s bedtime`; document.title = `${nameNow()}'s bedtime`; }
+
+  // Name and pronoun in Settings: changing them reloads so all wording updates.
+  $("childName").value = S.childName || "";
+  document.querySelectorAll("[data-pr]").forEach((b) => {
+    b.setAttribute("aria-pressed", String((S.pronoun || "she") === b.dataset.pr));
+    b.addEventListener("click", () => { S.pronoun = b.dataset.pr; save(); location.reload(); });
+  });
+  $("childName").addEventListener("change", () => { S.childName = $("childName").value.trim().slice(0, 30); save(); location.reload(); });
+
+  // ---------- first-time setup for new families ----------
+  if (!state.setupDone) {
+    const su = $("setup"); su.hidden = false; document.body.style.overflow = "hidden";
+    let pr = "she";
+    const prBtns = su.querySelectorAll("[data-supr]");
+    const preview = () => {
+      const months = /^\d{4}-\d{2}$/.test($("suBirth").value) ? ageFrom($("suBirth").value) : null;
+      const r = recSleep(months), wake = toMin($("suWake").value || "07:00"), nap = Math.max(0, parseInt($("suNap").value, 10) || 0);
+      const asleep = wake + 1440 - (r.mid - nap);
+      $("suPreview").textContent = `${months === null ? "For a 3-year-old" : `For ${ageLabel(months)}`}: about ${dur(r.mid)} of sleep a day. With a ${fmt(wake)} wake-up${nap ? ` and a ${dur(nap)} nap` : " and no nap"}, that's asleep by ${fmt(asleep)}.`;
+      return { r, wake, nap, asleep };
+    };
+    prBtns.forEach((b) => b.addEventListener("click", () => { pr = b.dataset.supr; prBtns.forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }));
+    ["suBirth", "suWake", "suNap"].forEach((id) => $(id).addEventListener("input", preview));
+    preview();
+    $("suStart").addEventListener("click", () => {
+      const v = preview();
+      S.childName = $("suName").value.trim().slice(0, 30);
+      S.pronoun = pr;
+      S.birthMonth = /^\d{4}-\d{2}$/.test($("suBirth").value) ? $("suBirth").value : "";
+      S.targetWake = toHHMM(v.wake); S.stdNap = v.nap; S.anchorBed = toHHMM(v.asleep);
+      state.setupDone = true; save(); location.reload();
+    });
+    $("suSkip").addEventListener("click", () => { state.setupDone = true; save(); su.hidden = true; document.body.style.overflow = ""; });
+  }
 
   syncInputs();
   calc(false);
