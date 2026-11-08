@@ -199,6 +199,8 @@ button.step-head:focus-visible { outline: 2px solid var(--accent); outline-offse
 .now-acts .btn:not(.big) { padding: 11px 12px; font-size: 15px; }
 .lastnight { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
 .lastnight p { margin: 0 0 10px; font-size: 15px; }
+.lastnight-move { background: var(--warn-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+.lastnight-move p { margin: 0 0 8px; font-size: 14px; }
 details.fold { font-size: inherit; color: inherit; }
 details.fold > summary { list-style: none; display: flex; align-items: center; gap: 10px; }
 details.fold > summary::-webkit-details-marker { display: none; }
@@ -215,7 +217,6 @@ details.fold[open] > summary { margin-bottom: 12px; }
 <body>
 <div class="wrap">
   <h1>Bedtime planner</h1>
-  <p class="sub">Tap the button below as the day goes. Tap any row in Today to change it. Everything saves automatically.</p>
 
   <section class="card hero" id="nowCard" aria-live="polite">
     <div class="pair">
@@ -254,6 +255,14 @@ details.fold[open] > summary { margin-bottom: 12px; }
       <li class="step" id="stepNight0">
         <button type="button" class="step-head" aria-expanded="false"><span class="st"></span><span class="nm">Last night<span class="sub"></span></span><span class="tm"></span><span class="chev" aria-hidden="true">›</span></button>
         <div class="step-edit">
+          <div class="lastnight-move" id="lnMove" hidden>
+            <p id="lnMoveText"></p>
+            <button type="button" class="btn primary" id="lnMoveBtn">Move to last night</button>
+          </div>
+          <div class="row">
+            <div class="field"><label for="lnLights">Lights out</label><input type="time" id="lnLights"></div>
+            <div class="field"><label for="lnAsleep">Asleep</label><input type="time" id="lnAsleep"></div>
+          </div>
           <div class="field">
             <span class="flabel" id="nwLabel">Woke in the night</span>
             <div class="stepper" role="group" aria-labelledby="nwLabel">
@@ -285,7 +294,6 @@ details.fold[open] > summary { margin-bottom: 12px; }
               <button type="button" data-mood="ok">OK</button>
               <button type="button" data-mood="grumpy">Grumpy</button>
             </div>
-            <div class="hint">Her mood in the morning is the best sign of whether last night was enough.</div>
           </div>
         </div>
       </li>
@@ -402,7 +410,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     </div>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
     <p class="hint" id="backupMsg" aria-live="polite"></p>
-    <div class="hint">Export saves the log and settings as a file you can keep in iCloud, Google Drive or email. Import adds a backup's nights to this phone without removing any. Use it on a new phone or to bring in the other parent's log.</div>
+    <div class="hint">Export saves everything as a file. Import adds a file's nights without removing any.</div>
     </details>
   </section>
 
@@ -423,7 +431,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
         <div class="field"><label for="books">Books (min)</label><input type="number" id="books" min="0" max="90" step="5"></div>
         <div class="field"><label for="settle">Settle (min)</label><input type="number" id="settle" min="0" max="90" step="5"></div>
       </div>
-      <div class="hint">"Asleep by" is for a normal day with a 1h 30m nap. No nap is 30 minutes earlier, and shorter or longer naps move it a little. It always stays within 30 minutes. Settle is the time from lights out until she's asleep.</div>
+      <div class="hint">Asleep by is for a normal 1h 30m nap day. Settle is lights out to asleep.</div>
     </details>
   </section>
 
@@ -590,13 +598,12 @@ details.fold[open] > summary { margin-bottom: 12px; }
     let base = Math.min(hi, Math.max(lo, raw));
 
     let why;
-    const napWord = e.napMode === "now" ? `a nap to ${fmt(napEnd)} (${dur(napLen)})` : `a ${dur(napLen)} nap`;
-    if (napStart === null) why = `No nap today, so ${NO_NAP_EARLIER} min earlier than her usual ${fmt(anchor)}.`;
+    if (napStart === null) why = `No nap, so ${NO_NAP_EARLIER} min earlier than usual.`;
     else if (lateNap) why = raw > hi
-      ? `Late nap (ended ${fmt(napEnd)}). Bedtime is held at ${fmt(hi)}, so she may take longer to settle tonight.`
-      : `She needs about 5 hours awake after a nap ending at ${fmt(napEnd)}.`;
-    else if (napAdj === 0) why = `A standard nap, so her usual ${fmt(anchor)} bedtime.`;
-    else why = `With ${napWord}, ${dur(Math.abs(napAdj))} ${napAdj < 0 ? "earlier" : "later"} than her usual ${fmt(anchor)}.`;
+      ? `Late nap, so held at the latest (${fmt(hi)}). She may take longer to settle.`
+      : `Late nap, so later: she needs about 5 hours awake after it.`;
+    else if (napAdj === 0) why = "Normal nap, so her usual bedtime.";
+    else why = `${dur(napLen)} nap, so ${dur(Math.abs(napAdj))} ${napAdj < 0 ? "earlier" : "later"} than usual.`;
     if (base < EARLIEST_BED) {
       base = EARLIEST_BED;
       notes.push("Moved to 6:00pm, the earliest bedtime this planner suggests. If she's falling apart, a little earlier is fine.");
@@ -887,7 +894,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     $("stallChip").setAttribute("aria-pressed", String(!!cur.stall));
     $("offChip").setAttribute("aria-pressed", String(!!cur.off));
     const w = toMin(cur.wake);
-    $("wakeHint").textContent = `Planning for a ${fmt(toMin(S.targetWake))} wake-up tomorrow.` + (w !== null && earlyWake(w) ? " She woke before 6am today, which can be a sign last night's bedtime was too late." : "");
+    $("wakeHint").textContent = w !== null && earlyWake(w) ? "Before 6am: last night's bedtime may have been too late." : "";
 
     const r = model(cur);
     if (r.error) { showError(r.error); if (persist) commit(); renderSide(); return; }
@@ -951,7 +958,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     $("error").hidden = true; $("planCard").hidden = false; $("nudgeBtns").hidden = false;
     $("asleepBy").textContent = fmt(shown.asleep);
     $("heroLights").textContent = fmt(shown.lights);
-    $("why").textContent = why + ` Lights out ${settle} min before, so she has time to settle.`;
+    $("why").textContent = why;
     renderNudge();
 
     $("tDinner").textContent = fmt(shown.dinnerStart); $("dDinner").textContent = `${shown.dinnerD} min`;
@@ -1370,7 +1377,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
   function morningNightHint() {
     const ws = wakesFor(shiftKey(day, -1)), hint = $("nwLogged");
     hint.hidden = !ws.length;
-    if (ws.length) hint.textContent = `Logged last night: ${ws.map((w) => `${fmt(toMin(w.t))}${w.cause ? " " + labelOf(CAUSES, w.cause).toLowerCase() : ""}${wakeLen(w) ? ` (${dur(wakeLen(w))})` : ""}`).join(", ")}. Only use the counter for wakings you didn't log.`;
+    if (ws.length) hint.textContent = `Logged: ${ws.map((w) => fmt(toMin(w.t))).join(", ")}. Use the counter only for extra wakings.`;
     $("snoreChip").setAttribute("aria-pressed", String(!!cur.snore));
   }
   $("awakeBtn2").addEventListener("click", openNight);
@@ -1402,7 +1409,6 @@ details.fold[open] > summary { margin-bottom: 12px; }
       big("Open the night screen", openNight);
       return;
     }
-    if (morning) lastNightTools(extra);
     if (morning && !wakeDone) {
       title.textContent = "Good morning";
       text.textContent = "When did she wake up?";
@@ -1414,7 +1420,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     }
     if (morning && !cur.mood && !cur.moodSkipped) {
       title.textContent = "Good morning";
-      text.textContent = `Woke at ${fmt(toMin(cur.wake))}. How is she this morning?`;
+      text.textContent = "How is she this morning?";
       const row = el("div", "now-row"); acts.appendChild(row);
       [["happy", "Happy"], ["ok", "OK"], ["grumpy", "Grumpy"]].forEach(([v, l]) => small(l, () => { cur.mood = v; calc(true); }, row));
       small("Skip", () => { cur.moodSkipped = true; calc(true); });
@@ -1430,7 +1436,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     const evening = n >= plan.origDinner - 60;
     if (!evening && !napDone) {
       title.textContent = "Nap";
-      text.textContent = "Tap when her nap starts, or if there's no nap today.";
+      text.textContent = "Has she napped yet?";
       big("Nap started now", () => { cur.napMode = "now"; cur.napSet = true; cur.napStart = nowHHMM(); $("napStart").value = cur.napStart; calc(true); });
       small("No nap today", () => { cur.napMode = "no"; cur.napSet = true; calc(true); });
       small("She already napped: enter times", () => { cur.napMode = "yes"; cur.napSet = true; calc(true); openStep("stepNap", "napStart"); });
@@ -1438,13 +1444,13 @@ details.fold[open] > summary { margin-bottom: 12px; }
     }
     if (!evening) {
       title.textContent = "Today";
-      text.textContent = `Dinner at ${fmt(plan.dinnerStart)}, lights out ${fmt(plan.lights)}, asleep by ${fmt(plan.asleep)}.`;
+      text.textContent = `Next: dinner at ${fmt(plan.dinnerStart)}.`;
       return;
     }
     if (!cur.lightsOut && !cur.actual) {
       title.textContent = "Tonight";
       const cdText = $("countdown").hidden ? "" : $("countdown").textContent + ". ";
-      if (n < plan.booksStart) text.textContent = cdText + `Dinner ${fmt(plan.dinnerStart)}, bath ${fmt(plan.bathStart)}, books ${fmt(plan.booksStart)}, lights out ${fmt(plan.lights)}.`;
+      if (n < plan.booksStart) text.textContent = cdText || `Next: dinner at ${fmt(plan.dinnerStart)}.`;
       else {
         text.textContent = (cdText || `Lights out at ${fmt(plan.lights)}, asleep by ${fmt(plan.asleep)}.`) + stirHint;
         big("Lights out now", () => { cur.lightsOut = nowHHMM(); $("lightsOut").value = cur.lightsOut; calc(true); });
@@ -1454,7 +1460,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
     }
     if (!cur.actual) {
       title.textContent = "Settling";
-      text.textContent = `Lights out at ${fmt(eveMin(cur.lightsOut))}. Tap when she's asleep.` + stirHint;
+      text.textContent = `Lights out at ${fmt(eveMin(cur.lightsOut))}.` + stirHint;
       big("She's asleep now", () => { cur.actual = nowHHMM(); $("actual").value = cur.actual; calc(true); });
       small(cur.stall ? "Stalling or calling out ✓" : "She's stalling or calling out", () => { cur.stall = !cur.stall; calc(true); });
       if (n >= plan.asleep + 60) small("She's awake in the night", openNight);
@@ -1462,48 +1468,33 @@ details.fold[open] > summary { margin-bottom: 12px; }
     }
     title.textContent = "Goodnight";
     const NP = state.nightPlan, tonight = wakesFor(nightKeyNow());
-    text.textContent = `Lights out ${fmt(eveMin(cur.lightsOut) ?? 0)}, asleep ${fmt(eveMin(cur.actual))}. All saved.`
+    text.textContent = "All logged. Tap if she wakes."
       + stirHint
       + (tonight.length ? ` Wakings logged: ${tonight.map((w) => fmt(toMin(w.t))).join(", ")}.` : "");
     big("She's awake", openNight);
   }
 
-  // Morning helpers for last night: move times that landed on today, or add them.
-  function lastNightTools(box) {
-    const y = shiftKey(day, -1), ye = state.log[y] || {};
-    const n = nowEve();
-    const lo = eveMin(cur.lightsOut), as = eveMin(cur.actual);
-    if ((lo !== null && lo > n) || (as !== null && as > n)) {
-      const d = el("div", "lastnight");
-      d.append(el("p", null, `Today's entry has ${[lo !== null ? `lights out ${fmt(lo)}` : "", as !== null ? `asleep ${fmt(as)}` : ""].filter(Boolean).join(" and ")}, which look like last night's. Move them to ${dayLabel(y)}?`));
-      const b = el("button", "btn", "Move to last night"); b.type = "button";
-      b.onclick = () => {
-        const e = state.log[y] = Object.assign({}, state.log[y] || {});
-        if (cur.lightsOut && !e.lightsOut) e.lightsOut = cur.lightsOut;
-        if (cur.actual && !e.actual) e.actual = cur.actual;
-        if (cur.stall) e.stall = true;
-        e.savedAt = nowHHMM();
-        cur.lightsOut = ""; cur.actual = ""; cur.stall = false; syncInputs(); calc(true);
-      };
-      d.append(b); box.append(d); return;
-    }
-    if (ye.actual) return;
-    const d = el("div", "lastnight");
-    d.append(el("p", "flabel", `Last night (${dayLabel(y)})`));
-    const mk = (label, val) => {
-      const f = el("div", "field"); const l = el("label", null, label); const i = document.createElement("input");
-      i.type = "time"; i.value = val || ""; i.id = "ln" + label.replace(/\W/g, ""); l.htmlFor = i.id; f.append(l, i); return [f, i];
-    };
-    const [f1, lo1] = mk("Lights out", ye.lightsOut), [f2, as1] = mk("Asleep", ye.actual);
-    const row = el("div", "row"); row.append(f1, f2); d.append(row);
-    const b = el("button", "btn", "Save last night"); b.type = "button";
-    b.onclick = () => {
-      if (!lo1.value && !as1.value) return;
-      state.log[y] = Object.assign({}, state.log[y] || {}, { lightsOut: lo1.value, actual: as1.value, savedAt: nowHHMM() });
-      save(); calc(false);
-    };
-    d.append(b); box.append(d);
+  // Last night lives in the "Last night" row of Today.
+  const lastNightKey = () => shiftKey(day, -1);
+  // Before noon, tonight's times that are later than now are really last night's.
+  function misplaced() {
+    const h = new Date().getHours();
+    if (!(h >= 4 && h < 12 && activeDay() === day)) return null;
+    const n = nowEve(), lo = eveMin(cur.lightsOut), as = eveMin(cur.actual);
+    return (lo !== null && lo > n) || (as !== null && as > n) ? { lo, as } : null;
   }
+  $("lnMoveBtn").addEventListener("click", () => {
+    const y = lastNightKey(), e = state.log[y] = Object.assign({}, state.log[y] || {});
+    if (cur.lightsOut && !e.lightsOut) e.lightsOut = cur.lightsOut;
+    if (cur.actual && !e.actual) e.actual = cur.actual;
+    if (cur.stall) e.stall = true;
+    e.savedAt = nowHHMM();
+    cur.lightsOut = ""; cur.actual = ""; cur.stall = false; syncInputs(); calc(true);
+  });
+  [["lnLights", "lightsOut"], ["lnAsleep", "actual"]].forEach(([id, field]) => $(id).addEventListener("change", () => {
+    const y = lastNightKey(), e = state.log[y] = Object.assign({}, state.log[y] || {});
+    e[field] = $(id).value; e.savedAt = nowHHMM(); save(); calc(false);
+  }));
 
   // Folded sections remember whether they're open on this phone.
   const FOLDS = ["patFold", "nightFold", "chartFold", "logFold", "backupFold"];
@@ -1545,10 +1536,23 @@ details.fold[open] > summary { margin-bottom: 12px; }
     const n = nowEve(), isToday = activeDay() === day;
     // Last night
     const ni = nightInfo(shiftKey(day, -1));
-    set("stepNight0", ni.count ? "done" : "plan", ni.count ? `${ni.count}×` : "", ni.count ? `Woke in the night${ni.awake ? `, ${dur(ni.awake)} awake` : ""}` : "Any night wakings? Tap to add");
+    const y = lastNightKey(), ye = state.log[y] || {}, mis = misplaced();
+    const ylo = eveMin(ye.lightsOut), yas = eveMin(ye.actual);
+    const morningNow = new Date().getHours() < 12 && isToday;
+    $("lnMove").hidden = !mis;
+    if (mis) $("lnMoveText").textContent = `Today has ${[mis.lo !== null ? `lights out ${fmt(mis.lo)}` : "", mis.as !== null ? `asleep ${fmt(mis.as)}` : ""].filter(Boolean).join(" and ")}. Those look like last night's.`;
+    if (document.activeElement !== $("lnLights")) $("lnLights").value = ye.lightsOut || "";
+    if (document.activeElement !== $("lnAsleep")) $("lnAsleep").value = ye.actual || "";
+    const nightBits = [];
+    if (ylo !== null && yas !== null && yas >= ylo) nightBits.push(`settled in ${dur(yas - ylo)}`);
+    nightBits.push(ni.count ? `woke ${ni.count}×` : "no wakings logged");
+    const nightSub = nightBits.join(" · ");
+    if (mis) set("stepNight0", "todo", "", "Times on today's row. Tap to move them");
+    else if (ylo === null && yas === null) set("stepNight0", morningNow ? "todo" : "plan", "–", "Add lights out and asleep");
+    else set("stepNight0", "done", [ylo, yas].filter((v) => v !== null).map(fmtShort).join("–"), nightSub[0].toUpperCase() + nightSub.slice(1));
     // Woke up
     const wakeDone = !!cur.wakeSet || !!cur.mood || (!!state.log[day] && toMin(cur.wake) !== null && cur.wake !== S.targetWake);
-    const moodTxt = cur.mood ? cur.mood[0].toUpperCase() + cur.mood.slice(1) : "Tap to add her mood";
+    const moodTxt = cur.mood ? { happy: "Happy", ok: "OK", grumpy: "Grumpy" }[cur.mood] : "Tap to add her mood";
     set("stepWake", wakeDone ? "done" : "todo", wakeDone ? fmt(toMin(cur.wake)) : "–", wakeDone ? moodTxt : "Not logged yet");
     // Nap
     if (cur.napMode === "now") set("stepNap", "now", `${fmt(toMin(cur.napStart))}`, $("wakeBy").hidden ? "Napping now" : `Napping now · wake her by ${$("wakeByTime").textContent}`);
@@ -1563,10 +1567,10 @@ details.fold[open] > summary { margin-bottom: 12px; }
     set("stepBath", phase(plan.bathStart, plan.booksStart));
     set("stepBooks", cur.lightsOut ? "past" : phase(plan.booksStart, plan.lights));
     const lo = eveMin(cur.lightsOut), as = eveMin(cur.actual);
-    if (lo !== null) set("stepLights", "done", fmt(lo), `Planned ${fmt(plan.lights)}` + (cur.stall ? " · stalling" : ""));
-    else set("stepLights", isToday && n >= plan.lights ? "now" : "plan", fmt(plan.lights), `Planned · ${+S.settle || 0} min to settle`);
-    if (as !== null) set("stepAsleep", "done", fmt(as), (lo !== null && as >= lo ? `Settled in ${dur(as - lo)} · ` : "") + `planned ${fmt(plan.asleep)}` + (cur.off ? " · off night" : ""));
-    else set("stepAsleep", lo !== null ? "now" : "plan", fmt(plan.asleep), lo !== null ? "Settling. Tap when she's asleep" : "Planned");
+    if (lo !== null) set("stepLights", "done", fmt(lo), `Plan ${fmt(plan.lights)}` + (cur.stall ? " · stalling" : ""));
+    else set("stepLights", isToday && n >= plan.lights ? "now" : "plan", fmt(plan.lights), `${+S.settle || 0} min to settle`);
+    if (as !== null) set("stepAsleep", "done", fmt(as), (lo !== null && as >= lo ? `Settled in ${dur(as - lo)} · ` : "") + `plan ${fmt(plan.asleep)}` + (cur.off ? " · off night" : ""));
+    else set("stepAsleep", lo !== null ? "now" : "plan", fmt(plan.asleep), lo !== null ? "Settling" : "");
     // Overnight
     const tonight = wakesFor(day);
     const open = state.openWake ? state.wakes.find((w) => w.id === state.openWake) : null;
@@ -1575,7 +1579,7 @@ details.fold[open] > summary { margin-bottom: 12px; }
   }
   function renderSaved() {
     const saved = !!state.log[day] && cur.savedAt;
-    $("savedLine").textContent = saved ? `Saved automatically, last at ${fmt(toMin(cur.savedAt))}.` : "Saves automatically as you tap.";
+    $("savedLine").textContent = saved ? `Saved ${fmt(toMin(cur.savedAt))}` : "Saves as you tap";
   }
 
   // ---------- backup ----------
