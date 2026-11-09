@@ -217,6 +217,18 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
 .setup-inner { max-width: 520px; margin: 0 auto; padding: 32px 16px 48px; }
 .setup h2 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
 #suPreview { margin: 4px 0 18px; font-size: 15px; color: var(--text); }
+.wake-edit:last-child { border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.wake-edit { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.wake-edit input { font-size: 16px; padding: 6px 8px; min-height: 38px; }
+.step-edit input[type="time"] { font-size: 16px; padding: 10px 8px; }
+.step-edit { padding-left: 24px; }
+.wake-lab { color: var(--muted); }
+.wake-len { font-weight: 600; }
+.wake-edit .linkbtn { justify-self: end; }
+.wake-why { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.nm-check { background: #140c08; border: 1px solid #c98a5a; border-radius: 12px; padding: 12px 14px; margin-top: 16px; }
+.nm-check p { margin: 0 0 10px; }
+.nm-check input { background: #000; color: #c98a5a; border-color: #3a2416; }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
@@ -271,6 +283,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
             <div class="field"><label for="lnAsleep">Asleep</label><input type="time" id="lnAsleep"></div>
           </div>
           <div class="field">
+            <div id="wakeList"></div>
             <span class="flabel" id="nwLabel">Woke in the night</span>
             <div class="stepper" role="group" aria-labelledby="nwLabel">
               <button type="button" class="btn" id="nwMinus" aria-label="One fewer">−</button>
@@ -536,6 +549,15 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     <div class="nm-label">What did you do?</div>
     <div class="nm-grid" id="nmResp"></div>
     <button type="button" class="nm-btn nm-main" id="nmBack">She's back asleep</button>
+    <div class="nm-check" id="nmCheck" hidden>
+      <p id="nmCheckText"></p>
+      <label for="nmBackAt" class="nm-label" style="margin-top:0">She fell back asleep at</label>
+      <input type="time" id="nmBackAt">
+      <div class="nm-grid" style="margin-top:10px">
+        <button type="button" class="nm-btn" id="nmBackSave">Save that time</button>
+        <button type="button" class="nm-btn" id="nmBackNow">She really was awake</button>
+      </div>
+    </div>
     <div class="nm-row"><button type="button" class="nm-link" id="nmClose">Close (still awake)</button><button type="button" class="nm-link" id="nmDelete">Delete this waking</button></div>
   </div>
 </div>
@@ -1476,6 +1498,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     if (!w) { w = { id: Date.now().toString(36), night: nightKeyNow(), t: nowHHMM(), cause: "", resp: "", back: "" }; state.wakes.push(w); }
     openId = w.id; state.openWake = w.id; save();
     renderNightScreen();
+    $("nmCheck").hidden = true;
     $("nightMode").hidden = false; document.body.style.overflow = "hidden";
     $("nmBack").focus();
   }
@@ -1497,11 +1520,50 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
   function morningNightHint() {
     const ws = wakesFor(shiftKey(day, -1)), hint = $("nwLogged");
     hint.hidden = !ws.length;
-    if (ws.length) hint.textContent = `Logged: ${ws.map((w) => fmt(toMin(w.t))).join(", ")}. Use the counter only for extra wakings.`;
+    hint.textContent = "";
+    $("nwLabel").textContent = ws.length ? "Other wakings you didn't log" : "Woke in the night";
+    renderWakeList(ws);
     $("snoreChip").setAttribute("aria-pressed", String(!!cur.snore));
   }
+  // Each logged waking can be corrected or deleted (e.g. "back asleep" tapped hours late).
+  function renderWakeList(ws) {
+    const box = $("wakeList");
+    if (box.contains(document.activeElement)) return;   // don't rebuild while a time is being edited
+    box.innerHTML = "";
+    ws.forEach((w) => {
+      const row = el("div", "wake-edit");
+      const mk = (val, label) => { const i = document.createElement("input"); i.type = "time"; i.value = val || ""; i.setAttribute("aria-label", label); return i; };
+      const t = mk(w.t, "Woke at"), back = mk(w.back, "Back asleep");
+      const len = el("span", "wake-len", wakeLen(w) ? dur(wakeLen(w)) : "");
+      const del = el("button", "linkbtn", "Delete"); del.type = "button";
+      const why = el("div", "wake-why", [labelOf(CAUSES, w.cause), labelOf(RESPS, w.resp)].filter(Boolean).join(" · "));
+      const commit = () => {
+        if (t.value) w.t = t.value;
+        w.back = back.value || "";
+        if (w.back && eveMin(w.back) < eveMin(w.t)) w.back = w.t;   // can't be back asleep before waking
+        save(); calc(false);
+      };
+      t.addEventListener("change", commit); back.addEventListener("change", commit);
+      del.addEventListener("click", () => { if (confirm(`Delete the ${fmt(toMin(w.t))} waking?`)) { state.wakes = state.wakes.filter((x) => x.id !== w.id); if (state.openWake === w.id) state.openWake = null; save(); calc(false); } });
+      const lab1 = el("span", "wake-lab", "Woke"), lab2 = el("span", "wake-lab", "Back asleep");
+      row.append(lab1, t, lab2, back, len, del);
+      if (why.textContent) row.append(why);
+      box.appendChild(row);
+    });
+  }
   $("awakeBtn2").addEventListener("click", openNight);
-  $("nmBack").addEventListener("click", () => { const w = state.wakes.find((x) => x.id === openId); if (w) w.back = nowHHMM(); state.openWake = null; save(); closeNight(); });
+  const LONG_WAKE = 120;   // over this, check before saving: usually "back asleep" was tapped late
+  const finishWake = (back) => { const w = state.wakes.find((x) => x.id === openId); if (w) w.back = back; state.openWake = null; $("nmCheck").hidden = true; save(); closeNight(); };
+  $("nmBack").addEventListener("click", () => {
+    const w = state.wakes.find((x) => x.id === openId); if (!w) return finishWake(nowHHMM());
+    const len = eveMin(nowHHMM()) - eveMin(w.t);
+    if (len <= LONG_WAKE) return finishWake(nowHHMM());
+    $("nmCheckText").textContent = `That would be ${dur(len)} awake since ${fmt(toMin(w.t))}. If you forgot to tap earlier, set when she actually fell back asleep.`;
+    $("nmBackAt").value = toHHMM(toMin(w.t) + 20);
+    $("nmCheck").hidden = false; $("nmBackAt").focus();
+  });
+  $("nmBackSave").addEventListener("click", () => { if ($("nmBackAt").value) finishWake($("nmBackAt").value); });
+  $("nmBackNow").addEventListener("click", () => finishWake(nowHHMM()));
   $("nmClose").addEventListener("click", closeNight);
   $("nmDelete").addEventListener("click", () => { state.wakes = state.wakes.filter((x) => x.id !== openId); state.openWake = null; save(); closeNight(); });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !$("nightMode").hidden) closeNight(); });
