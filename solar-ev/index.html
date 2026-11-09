@@ -446,7 +446,8 @@ async function amberPrices() {
     const general = new Map(), feedIn = new Map(), high = new Map(), spike = new Map();
     let last = 0, nowGen = null, nowFeed = null;
     (iv || []).forEach((x) => {
-      const t = Date.parse(x.startTime);
+      // Amber's intervals start one second past the boundary (e.g. 05:00:01), so snap to the half-hour.
+      const t = Math.floor(Date.parse(x.startTime) / 1800e3) * 1800e3;
       if (!Number.isFinite(t) || typeof x.perKwh !== 'number') return;
       if (x.channelType === 'general') {
         general.set(t, x.perKwh); last = Math.max(last, t);
