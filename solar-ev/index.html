@@ -3,8 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Battery or Grid">
 <title>Battery or Grid?</title>
-<meta name="description" content="Should the EV charge from your home battery tonight, or from the grid? Uses Amber prices and the cloud forecast to decide.">
+<meta name="description" content="Should the EV charge from your home battery tonight, or from the grid? Uses Amber prices and the solar forecast to decide.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,16 +15,16 @@
   --bg: #f6f5f1; --surface: #ffffff; --surface-2: #f0eee8; --text: #1d1c19; --muted: #6b675e; --border: #e2dfd6;
   --accent: #d98a00; --good: #1f7a4d; --good-soft: #e3f3ea; --bad: #b23b2a; --bad-soft: #f9e6e2; --mid: #8a6100; --mid-soft: #fbf0d4;
   --info: #2f5f9e; --info-soft: #e4edf8;
-  --series-solar: #e09a00; --series-load: #7b7f8c; --series-cloud: #5b8fd6; --series-import: #b23b2a; --series-feed: #1f7a4d;
+  --series-solar: #e09a00; --series-cloud: #5b8fd6; --series-import: #b23b2a; --series-feed: #1f7a4d;
   --series-a: #1f7a4d; --series-b: #b23b2a; --series-c: #2f6fd0;
-  --radius: 14px; color-scheme: light;
+  --radius: 16px; color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #141412; --surface: #1d1c1a; --surface-2: #262522; --text: #efede7; --muted: #a19d92; --border: #34322d;
     --accent: #f0a91c; --good: #5cc48f; --good-soft: #15301f; --bad: #f07a66; --bad-soft: #3a1c17; --mid: #f0c25c; --mid-soft: #362a10;
     --info: #8db8f2; --info-soft: #172538;
-    --series-solar: #f0a91c; --series-load: #9fa3ae; --series-cloud: #7fadf0; --series-import: #f07a66; --series-feed: #5cc48f;
+    --series-solar: #f0a91c; --series-cloud: #7fadf0; --series-import: #f07a66; --series-feed: #5cc48f;
     --series-a: #5cc48f; --series-b: #f07a66; --series-c: #7fadf0; color-scheme: dark;
   }
 }
@@ -30,92 +32,92 @@
   --bg: #141412; --surface: #1d1c1a; --surface-2: #262522; --text: #efede7; --muted: #a19d92; --border: #34322d;
   --accent: #f0a91c; --good: #5cc48f; --good-soft: #15301f; --bad: #f07a66; --bad-soft: #3a1c17; --mid: #f0c25c; --mid-soft: #362a10;
   --info: #8db8f2; --info-soft: #172538;
-  --series-solar: #f0a91c; --series-load: #9fa3ae; --series-cloud: #7fadf0; --series-import: #f07a66; --series-feed: #5cc48f;
+  --series-solar: #f0a91c; --series-cloud: #7fadf0; --series-import: #f07a66; --series-feed: #5cc48f;
   --series-a: #5cc48f; --series-b: #f07a66; --series-c: #7fadf0; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
-.wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
-header h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
-header p { margin: 0; color: var(--muted); max-width: 64ch; }
-.grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; margin-top: 22px; align-items: start; }
-@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-.card + .card { margin-top: 14px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 64px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+header h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
+header .when { color: var(--muted); font-size: 14px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-top: 14px; }
 .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
-.card h2 .sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
-details.card > summary { cursor: pointer; list-style: none; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
-details.card > summary::-webkit-details-marker { display: none; }
-details.card > summary::after { content: "＋"; float: right; }
-details.card[open] > summary::after { content: "－"; }
-details.card[open] > summary { margin-bottom: 12px; }
-.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
-.fields .full { grid-column: 1 / -1; }
-label { display: block; font-size: 12.5px; color: var(--muted); font-weight: 500; }
-label .hint { font-weight: 400; opacity: 0.85; }
 input, select, button { font: inherit; color: var(--text); }
-input, select { width: 100%; margin-top: 4px; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface-2); min-width: 0; }
-input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.unit { position: relative; }
-.unit input { padding-right: 50px; }
-.unit::after { content: attr(data-unit); position: absolute; right: 10px; bottom: 9px; font-size: 12px; color: var(--muted); pointer-events: none; }
-.row { display: flex; gap: 8px; align-items: stretch; }
-.row > * { flex: 1; min-width: 0; }
-button { padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; font-weight: 500; white-space: nowrap; }
-button.primary { background: var(--accent); border-color: var(--accent); color: #1d1300; flex: 0 0 auto; }
-button:hover { filter: brightness(0.97); }
-.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 4px; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
-.seg button { border: 0; border-radius: 0; background: var(--surface-2); font-weight: 500; white-space: normal; line-height: 1.25; }
+
+/* inputs */
+.slider { margin-bottom: 16px; }
+.slider .top { display: flex; justify-content: space-between; align-items: baseline; }
+.slider label { font-weight: 500; }
+.slider output { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.slider input[type=range] { width: 100%; margin: 6px 0 0; accent-color: var(--accent); height: 28px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 6px; }
+.seg button { border: 0; padding: 11px 8px; background: var(--surface-2); cursor: pointer; font-weight: 500; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: #1d1300; }
-.loc-results { margin-top: 6px; display: grid; gap: 4px; }
-.loc-results button { text-align: left; font-weight: 400; white-space: normal; }
-.small { font-size: 12.5px; color: var(--muted); }
-.status { margin-top: 8px; font-size: 13px; color: var(--muted); min-height: 1.2em; }
-.status.err { color: var(--bad); }
-.status.ok { color: var(--good); }
-.range-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-.range-row input[type=range] { flex: 1; padding: 0; accent-color: var(--accent); background: none; border: 0; }
-.range-row output { font-weight: 600; min-width: 44px; text-align: right; color: var(--text); font-size: 15px; }
+.note { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
 
-.verdict { border-radius: var(--radius); padding: 20px; background: var(--surface); border: 1px solid var(--border); }
-.verdict.good { background: var(--good-soft); border-color: transparent; }
-.verdict.bad { background: var(--bad-soft); border-color: transparent; }
-.verdict.mid { background: var(--mid-soft); border-color: transparent; }
-.verdict.info { background: var(--info-soft); border-color: transparent; }
-.verdict .tag { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--muted); }
-.verdict h3 { margin: 4px 0 4px; font-size: 26px; letter-spacing: -0.02em; line-height: 1.2; }
-.verdict .action { font-weight: 600; margin: 2px 0 8px; }
-.verdict.good h3 { color: var(--good); } .verdict.bad h3 { color: var(--bad); } .verdict.mid h3 { color: var(--mid); } .verdict.info h3 { color: var(--info); }
-.verdict p { margin: 6px 0 0; max-width: 72ch; }
-.verdict ul { margin: 10px 0 0; padding-left: 18px; }
-.verdict li { margin: 3px 0; }
+/* answer */
+.answer { border-radius: var(--radius); padding: 20px; margin-top: 14px; background: var(--surface); border: 1px solid var(--border); }
+.answer.good { background: var(--good-soft); border-color: transparent; }
+.answer.bad { background: var(--bad-soft); border-color: transparent; }
+.answer.mid { background: var(--mid-soft); border-color: transparent; }
+.answer.info { background: var(--info-soft); border-color: transparent; }
+.answer .src { font-size: 12.5px; color: var(--muted); }
+.answer h3 { margin: 4px 0 2px; font-size: 28px; line-height: 1.15; letter-spacing: -0.02em; }
+.answer.good h3 { color: var(--good); } .answer.bad h3 { color: var(--bad); } .answer.mid h3 { color: var(--mid); } .answer.info h3 { color: var(--info); }
+.answer .save { margin: 4px 0 0; font-weight: 500; }
+.answer ol { margin: 14px 0 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 8px; }
+.answer ol li { counter-increment: step; display: grid; grid-template-columns: 28px 1fr; align-items: start; gap: 8px; }
+.answer ol li::before { content: counter(step); width: 24px; height: 24px; border-radius: 50%; background: var(--surface); color: var(--text); font-size: 13px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--mid); vertical-align: middle; margin-left: 6px; }
 
-.days { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-@media (max-width: 620px) { .days { grid-template-columns: minmax(0, 1fr); } }
-.day { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-.day .d { font-weight: 600; }
-.day .big { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.day .meta { font-size: 12.5px; color: var(--muted); }
-.day .bars { margin-top: 8px; display: grid; gap: 4px; font-size: 12.5px; }
-.bar { display: grid; grid-template-columns: 74px 1fr 38px; align-items: center; gap: 6px; }
-.bar .track { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
-.bar .fill { height: 100%; border-radius: 4px; }
-.bar .v { text-align: right; font-variant-numeric: tabular-nums; }
-.sky { font-size: 20px; float: right; line-height: 1; }
+/* why */
+.why { display: grid; gap: 14px; }
+.why .row { display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: start; }
+.why .ic { font-size: 22px; line-height: 1.2; text-align: center; }
+.why b { display: block; }
+.why span { color: var(--muted); font-size: 14.5px; }
 
-.chart-box { position: relative; height: 250px; }
-.table-scroll { overflow-x: auto; }
+/* disclosure sections */
+details.card > summary { cursor: pointer; list-style: none; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::after { content: "＋"; color: var(--muted); }
+details.card[open] > summary::after { content: "－"; }
+details.card[open] > summary { margin-bottom: 14px; }
+.chart-title { font-size: 13px; color: var(--muted); font-weight: 600; margin: 18px 0 6px; }
+.chart-title:first-of-type { margin-top: 0; }
+.chart-box { position: relative; height: 220px; }
+.table-scroll { overflow-x: auto; margin-top: 18px; }
 table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
-th, td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th, td { padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }
 thead th { font-weight: 600; color: var(--muted); font-size: 12px; }
 tr.best td { font-weight: 600; }
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
-.empty { text-align: center; color: var(--muted); padding: 40px 16px; }
-.howto p, .howto li { color: var(--muted); font-size: 13.5px; }
-.howto ul { padding-left: 18px; }
-footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
+.small { font-size: 13px; color: var(--muted); }
+
+/* settings */
+.set h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 22px 0 10px; font-weight: 600; }
+.set h3:first-child { margin-top: 0; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.fields .full { grid-column: 1 / -1; }
+.fields label { display: block; font-size: 13px; color: var(--muted); font-weight: 500; }
+.fields input, .fields select, .set > input, .row2 input { width: 100%; margin-top: 4px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); min-width: 0; }
+input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.unit { position: relative; }
+.unit input { padding-right: 52px; }
+.unit::after { content: attr(data-unit); position: absolute; right: 10px; bottom: 10px; font-size: 12px; color: var(--muted); pointer-events: none; }
+.row2 { display: flex; gap: 8px; align-items: end; }
+.row2 > * { flex: 1; min-width: 0; }
+.btn { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; font-weight: 500; white-space: nowrap; flex: 0 0 auto; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #1d1300; }
+.loc-results { margin-top: 6px; display: grid; gap: 4px; }
+.loc-results button { text-align: left; }
+.status { margin-top: 6px; font-size: 13px; color: var(--muted); min-height: 1.2em; }
+.status.err { color: var(--bad); } .status.ok { color: var(--good); }
+.setup { text-align: center; color: var(--muted); padding: 28px 16px; }
+footer { margin-top: 24px; font-size: 12px; color: var(--muted); }
 a { color: inherit; }
 </style>
 </head>
@@ -123,267 +125,141 @@ a { color: inherit; }
 <div class="wrap">
   <header>
     <h1>Battery or Grid?</h1>
-    <p>Check this in the afternoon before you plug in. It reads the next three days of cloud and solar forecast plus your Amber prices, and tells you whether to let the home battery charge the car tonight.</p>
+    <span class="when" id="when"></span>
   </header>
 
-  <div class="grid">
-    <!-- ============ INPUTS ============ -->
-    <div>
-      <section class="card">
-        <h2>Tonight</h2>
-        <div class="fields">
-          <div class="full">
-            <label for="soc">Home battery right now</label>
-            <div class="range-row"><input type="range" id="soc" min="0" max="100" step="1" value="80"><output id="socOut">80%</output></div>
-          </div>
-          <div>
-            <label for="carNow">Car now</label>
-            <div class="unit" data-unit="%"><input type="number" id="carNow" min="0" max="100" step="1" value="40" inputmode="numeric"></div>
-          </div>
-          <div>
-            <label for="carTarget">Charge car to</label>
-            <div class="unit" data-unit="%"><input type="number" id="carTarget" min="0" max="100" step="1" value="80" inputmode="numeric"></div>
-          </div>
-          <div>
-            <label for="plugIn">Plug in at</label>
-            <select id="plugIn"></select>
-          </div>
-          <div>
-            <label for="depart">Car leaves at</label>
-            <select id="depart"></select>
-          </div>
-          <div class="full small" id="heatHint"></div>
-          <div class="full">
-            <label for="parking">Tomorrow the car is parked</label>
-            <select id="parking">
-              <option value="out">Outside in the sun</option>
-              <option value="cover">Undercover / garage</option>
-            </select>
-          </div>
-          <div class="full">
-            <label id="homeLbl">Tomorrow during the day, the car is…</label>
-            <div class="seg" role="group" aria-labelledby="homeLbl">
-              <button type="button" id="homeNo" aria-pressed="true">Out (at work)</button>
-              <button type="button" id="homeYes" aria-pressed="false">Home (can use solar)</button>
-            </div>
-          </div>
-          <div class="full small" id="carNeedLbl"></div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Amber prices</h2>
-        <div id="amberSetup">
-          <label for="amberToken">Amber API token <span class="hint">(Amber app → Settings → For Developers)</span></label>
-          <div class="row" style="margin-top:4px">
-            <input id="amberToken" type="password" autocomplete="off" placeholder="psk_…" style="margin-top:0">
-            <button id="amberConnect" class="primary">Connect</button>
-          </div>
-          <div class="small" style="margin-top:6px">Saved only in this browser and sent only to Amber.</div>
-        </div>
-        <div id="amberSite" hidden>
-          <label for="amberSiteSel">Site</label>
-          <select id="amberSiteSel"></select>
-          <div class="row" style="margin-top:8px">
-            <button id="amberRefresh">Refresh prices</button>
-            <button id="amberForget">Forget token</button>
-          </div>
-        </div>
-        <div id="amberStatus" class="status"></div>
-      </section>
-
-      <section class="card">
-        <h2>Location</h2>
-        <div class="row">
-          <input id="locQuery" placeholder="Suburb or postcode" aria-label="Suburb or postcode">
-          <button id="locSearch" class="primary">Search</button>
-        </div>
-        <div class="row" style="margin-top:8px"><button id="locGeo">Use my location</button></div>
-        <div id="locResults" class="loc-results"></div>
-        <div id="locStatus" class="status"></div>
-      </section>
-
-      <details class="card" open id="sysCard">
-        <summary>Your system</summary>
-        <div class="fields">
-          <div>
-            <label for="pvKw">Solar panels</label>
-            <div class="unit" data-unit="kW"><input type="number" id="pvKw" min="0" step="0.1" value="6.5" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="invKw">Inverter</label>
-            <div class="unit" data-unit="kW"><input type="number" id="invKw" min="0" step="0.1" value="15" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="orient">Panels face</label>
-            <select id="orient">
-              <option value="180">North</option>
-              <option value="-135">North-east</option>
-              <option value="135">North-west</option>
-              <option value="-90">East</option>
-              <option value="90">West</option>
-              <option value="ew">East + West split</option>
-              <option value="0">South</option>
-            </select>
-          </div>
-          <div>
-            <label for="tilt">Roof pitch</label>
-            <div class="unit" data-unit="°"><input type="number" id="tilt" min="0" max="90" step="1" value="20" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="batKwh">Home battery</label>
-            <div class="unit" data-unit="kWh"><input type="number" id="batKwh" min="0" step="0.1" value="24" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="reserve">Backup reserve</label>
-            <div class="unit" data-unit="%"><input type="number" id="reserve" min="0" max="100" step="1" value="10" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="houseDaily">House use / day <span class="hint">(no car)</span></label>
-            <div class="unit" data-unit="kWh"><input type="number" id="houseDaily" min="0" step="0.5" value="18" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="carKwh">Car battery</label>
-            <div class="unit" data-unit="kWh"><input type="number" id="carKwh" min="1" step="1" value="75" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="evKw">Car charging speed</label>
-            <div class="unit" data-unit="kW"><input type="number" id="evKw" min="1" step="0.1" value="11" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="evEff">Charging efficiency</label>
-            <div class="unit" data-unit="%"><input type="number" id="evEff" min="50" max="100" step="1" value="90" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="spikeProt">Spike protection</label>
-            <select id="spikeProt">
-              <option value="1">On</option>
-              <option value="0">Off</option>
-            </select>
-          </div>
-          <div>
-            <label for="spikeC">Spike price above</label>
-            <div class="unit" data-unit="c/kWh"><input type="number" id="spikeC" min="0" step="1" value="50" inputmode="decimal"></div>
-          </div>
-          <div class="full small" style="margin-top:-4px">With spike protection on, the car can't take battery energy the house will need to get through forecast price spikes.</div>
-          <div class="full">
-            <label for="curtail">When feed-in goes negative and the battery's full</label>
-            <select id="curtail">
-              <option value="1">Solar is curtailed (SmartShift export limit on)</option>
-              <option value="0">Solar still exports (I pay to export)</option>
-            </select>
-          </div>
-        </div>
-      </details>
-
-      <details class="card" id="tariffCard">
-        <summary>Prices without Amber</summary>
-        <p class="small" style="margin:0 0 10px">Used only if Amber isn't connected.</p>
-        <div class="fields">
-          <div>
-            <label for="peak">Normal rate</label>
-            <div class="unit" data-unit="c/kWh"><input type="number" id="peak" min="0" step="0.1" value="35" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="offpeak">Overnight rate</label>
-            <div class="unit" data-unit="c/kWh"><input type="number" id="offpeak" min="0" step="0.1" value="20" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="opStart">Overnight from</label>
-            <select id="opStart"></select>
-          </div>
-          <div>
-            <label for="opEnd">until</label>
-            <select id="opEnd"></select>
-          </div>
-          <div class="full">
-            <label for="fit">Feed-in tariff</label>
-            <div class="unit" data-unit="c/kWh"><input type="number" id="fit" min="-50" step="0.1" value="5" inputmode="decimal"></div>
-          </div>
-        </div>
-      </details>
-
-      <details class="card" id="advCard">
-        <summary>Fine-tuning</summary>
-        <div class="fields">
-          <div>
-            <label for="pr">Solar performance</label>
-            <div class="unit" data-unit="%"><input type="number" id="pr" min="30" max="100" step="1" value="80" inputmode="decimal"></div>
-          </div>
-          <div>
-            <label for="rte">Battery round-trip</label>
-            <div class="unit" data-unit="%"><input type="number" id="rte" min="50" max="100" step="1" value="92" inputmode="decimal"></div>
-          </div>
-          <div class="full">
-            <label for="model">Weather model</label>
-            <select id="model">
-              <option value="best_match">Best match (blend of models)</option>
-              <option value="bom_access_global">Bureau of Meteorology ACCESS-G</option>
-              <option value="ecmwf_ifs025">ECMWF IFS</option>
-              <option value="gfs_seamless">NOAA GFS</option>
-            </select>
-          </div>
-          <div class="full">
-            <label for="calYest">Calibrate: how much did your solar make yesterday?</label>
-            <div class="row" style="margin-top:4px">
-              <div class="unit" data-unit="kWh"><input type="number" id="calYest" min="0" step="0.1" placeholder="from the mySigen app" inputmode="decimal" style="margin-top:0"></div>
-              <button id="calBtn" style="flex:0 0 auto">Calibrate</button>
-            </div>
-            <div id="calStatus" class="status"></div>
-          </div>
-          <div class="full small">Solar performance covers heat, dust, shading and wiring losses (75–85% is typical). Calibrating from yesterday's real generation sets it for you. Best done after a clear day.</div>
-        </div>
-      </details>
+  <!-- The only things to set each afternoon -->
+  <section class="card" aria-label="Right now">
+    <div class="slider">
+      <div class="top"><label for="soc">Home battery</label><output id="socOut">80%</output></div>
+      <input type="range" id="soc" min="0" max="100" step="1" value="80">
     </div>
-
-    <!-- ============ RESULTS ============ -->
-    <div id="results">
-      <div class="card empty" id="emptyState">Search for your suburb or postcode to load the forecast. Connect Amber for real prices.</div>
-      <div id="output" hidden>
-        <div id="verdict" class="verdict"></div>
-        <div class="days" id="days"></div>
-
-        <section class="card" style="margin-top:14px">
-          <h2>Solar and cloud <span class="sub">· next 3 days</span></h2>
-          <div class="chart-box"><canvas id="fcChart" aria-label="Hourly solar forecast and cloud cover"></canvas></div>
-        </section>
-
-        <section class="card">
-          <h2>Prices <span class="sub" id="priceSub"></span></h2>
-          <div class="chart-box"><canvas id="priceChart" aria-label="Import and feed-in prices"></canvas></div>
-        </section>
-
-        <section class="card">
-          <h2>Home battery level, each option</h2>
-          <div class="chart-box"><canvas id="socChart" aria-label="Projected home battery level for each option"></canvas></div>
-        </section>
-
-        <section class="card">
-          <h2>The numbers <span class="sub">(now to the end of the third day)</span></h2>
-          <div class="table-scroll"><table id="cmpTable"></table></div>
-          <p class="small" style="margin:10px 0 0">"Effective cost" is grid purchases minus feed-in credit over the whole period, plus the value of any battery charge you'd be short at the end compared with the best option.</p>
-        </section>
-
-        <section class="card howto">
-          <h2>How it works</h2>
-          <p>It simulates your house hour by hour from now until the end of the third day, once for each option, and compares the cost.</p>
-          <ul>
-            <li><b>Solar</b> is the <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> forecast of sunlight on panels at your roof's angle, which already accounts for cloud. It's scaled by panel size and performance.</li>
-            <li><b>House use</b> follows a typical Australian daily pattern (small morning bump, big evening peak) scaled to your daily total.</li>
-            <li><b>Each hour:</b> solar powers the house and car first, then fills the battery, then exports. If feed-in is negative and curtailment is on, the extra solar is switched off instead. When solar runs short, the battery covers the house (and the car, if allowed) down to your reserve. The grid covers the rest.</li>
-            <li><b>Prices</b> are Amber's half-hourly forecast for buying and feed-in. Where Amber's forecast runs out (usually after tomorrow), it uses the typical forecast price for that time of day. One-off spikes aren't copied forward.</li>
-            <li><b>Battery on:</b> the car charges from plug-in time and the battery supplies it. <b>Battery off:</b> the car charges in the cheapest block before it leaves and the battery is kept for the house. <b>Solar tomorrow:</b> the car charges in the cheapest daytime block tomorrow.</li>
-            <li>Looking three days ahead catches the trap where tomorrow is sunny but the next two days are grey. If the battery is already full tomorrow either way, those later days don't change the answer.</li>
-            <li><b>Spike protection:</b> an hour is protected if Amber flags it as a possible spike, its forecast is above your spike price, or Amber's high estimate is over double it. The car can't take the battery energy the house needs to get through those hours. That includes the hours in between, and it assumes solar comes in 30% under forecast, to be safe.</li>
-            <li><b>Charge limit:</b> heat plus a full pack is what wears out NMC batteries. If the car's parked outside, round tomorrow's top temperature to the nearest 10 and take it off 100. So 23°C gives 80% and 34°C gives 70%. It never goes below 50%.</li>
-            <li>It's a forecast. Treat close calls as close calls.</li>
-          </ul>
-        </section>
+    <div class="slider">
+      <div class="top"><label for="carNow">Car</label><output id="carNowOut">40%</output></div>
+      <input type="range" id="carNow" min="0" max="100" step="1" value="40">
+    </div>
+    <div>
+      <label id="homeLbl" style="font-weight:500">Tomorrow the car is</label>
+      <div class="seg" role="group" aria-labelledby="homeLbl">
+        <button type="button" id="homeNo" aria-pressed="true">Out at work</button>
+        <button type="button" id="homeYes" aria-pressed="false">Home all day</button>
       </div>
     </div>
+    <p class="note" id="carNote"></p>
+  </section>
+
+  <div id="setup" class="card setup">Open <b>Settings</b> below and add your suburb and Amber token to get started.</div>
+
+  <div id="output" hidden>
+    <div id="answer" class="answer" aria-live="polite"></div>
+
+    <section class="card">
+      <h2>Why</h2>
+      <div class="why" id="why"></div>
+    </section>
+
+    <details class="card" id="detailsCard">
+      <summary>Show the numbers</summary>
+      <div class="chart-title">Home battery, each option</div>
+      <div class="chart-box"><canvas id="socChart" aria-label="Projected home battery level for each option"></canvas></div>
+      <div class="chart-title" id="priceTitle">Prices</div>
+      <div class="chart-box"><canvas id="priceChart" aria-label="Buy and feed-in prices"></canvas></div>
+      <div class="chart-title">Solar and cloud</div>
+      <div class="chart-box"><canvas id="fcChart" aria-label="Hourly solar forecast and cloud cover"></canvas></div>
+      <div class="table-scroll"><table id="cmpTable"></table></div>
+      <p class="small">Everything runs from now to the end of the third day. "Effective cost" is power bought, minus feed-in earned, plus any battery charge you'd be short at the end compared with the best option.</p>
+      <p class="small">How it works: for every hour it runs your house. Solar powers the house and car first, then fills the battery, then exports (or is switched off when feed-in is negative). The battery covers the house at night, and the car too if allowed. The grid covers the rest. Spike protection stops the car taking battery energy the house will need to get through a price spike, assuming solar comes in 30% under forecast. The charge limit uses the heat rule: round tomorrow's top temperature to the nearest 10 and take it off 100 (never below 50%).</p>
+    </details>
   </div>
 
-  <footer>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0). Prices from the Amber Electric API. Settings and your token are saved in this browser only.</footer>
+  <details class="card set" id="settingsCard">
+    <summary>Settings</summary>
+
+    <h3>Amber</h3>
+    <div id="amberSetup">
+      <div class="row2">
+        <input id="amberToken" type="password" autocomplete="off" placeholder="Amber API token (psk_…)" aria-label="Amber API token">
+        <button id="amberConnect" class="btn primary">Connect</button>
+      </div>
+      <p class="small" style="margin:6px 0 0">Amber app → Settings → For Developers. Saved only in this browser.</p>
+    </div>
+    <div id="amberSite" hidden>
+      <div class="fields"><div class="full"><label for="amberSiteSel">Site</label><select id="amberSiteSel"></select></div></div>
+      <div class="row2" style="margin-top:8px"><button id="amberRefresh" class="btn">Refresh prices</button><button id="amberForget" class="btn">Forget token</button></div>
+    </div>
+    <div id="amberStatus" class="status"></div>
+
+    <h3>Location</h3>
+    <div class="row2">
+      <input id="locQuery" placeholder="Suburb or postcode" aria-label="Suburb or postcode">
+      <button id="locSearch" class="btn primary">Search</button>
+      <button id="locGeo" class="btn" title="Use my location">📍</button>
+    </div>
+    <div id="locResults" class="loc-results"></div>
+    <div id="locStatus" class="status"></div>
+
+    <h3>Car</h3>
+    <div class="fields">
+      <div><label for="limitMode">Charge limit</label>
+        <select id="limitMode"><option value="heat">Heat rule</option><option value="fixed">Fixed</option></select></div>
+      <div><label for="carTarget">Fixed limit / undercover</label><div class="unit" data-unit="%"><input type="number" id="carTarget" min="0" max="100" step="5" value="80" inputmode="numeric"></div></div>
+      <div><label for="parking">Parked during the day</label>
+        <select id="parking"><option value="out">Outside</option><option value="cover">Undercover</option></select></div>
+      <div><label for="carKwh">Car battery</label><div class="unit" data-unit="kWh"><input type="number" id="carKwh" min="1" step="1" value="75" inputmode="decimal"></div></div>
+      <div><label for="plugIn">Plug in at</label><select id="plugIn"></select></div>
+      <div><label for="depart">Leaves at</label><select id="depart"></select></div>
+      <div><label for="evKw">Charging speed</label><div class="unit" data-unit="kW"><input type="number" id="evKw" min="1" step="0.1" value="11" inputmode="decimal"></div></div>
+      <div><label for="evEff">Charging efficiency</label><div class="unit" data-unit="%"><input type="number" id="evEff" min="50" max="100" step="1" value="90" inputmode="decimal"></div></div>
+    </div>
+
+    <h3>Home</h3>
+    <div class="fields">
+      <div><label for="pvKw">Solar panels</label><div class="unit" data-unit="kW"><input type="number" id="pvKw" min="0" step="0.1" value="6.5" inputmode="decimal"></div></div>
+      <div><label for="invKw">Inverter</label><div class="unit" data-unit="kW"><input type="number" id="invKw" min="0" step="0.1" value="15" inputmode="decimal"></div></div>
+      <div><label for="orient">Panels face</label>
+        <select id="orient">
+          <option value="180">North</option><option value="-135">North-east</option><option value="135">North-west</option>
+          <option value="-90">East</option><option value="90">West</option><option value="ew">East + West</option><option value="0">South</option>
+        </select></div>
+      <div><label for="tilt">Roof pitch</label><div class="unit" data-unit="°"><input type="number" id="tilt" min="0" max="90" step="1" value="20" inputmode="decimal"></div></div>
+      <div><label for="batKwh">Home battery</label><div class="unit" data-unit="kWh"><input type="number" id="batKwh" min="0" step="0.1" value="24" inputmode="decimal"></div></div>
+      <div><label for="reserve">Backup reserve</label><div class="unit" data-unit="%"><input type="number" id="reserve" min="0" max="100" step="1" value="10" inputmode="decimal"></div></div>
+      <div class="full"><label for="houseDaily">House use per day, not counting the car</label><div class="unit" data-unit="kWh"><input type="number" id="houseDaily" min="0" step="0.5" value="18" inputmode="decimal"></div></div>
+    </div>
+
+    <h3>SmartShift</h3>
+    <div class="fields">
+      <div><label for="spikeProt">Spike protection</label><select id="spikeProt"><option value="1">On</option><option value="0">Off</option></select></div>
+      <div><label for="spikeC">Spike means over</label><div class="unit" data-unit="c/kWh"><input type="number" id="spikeC" min="0" step="1" value="50" inputmode="decimal"></div></div>
+      <div class="full"><label for="curtail">Negative feed-in and a full battery</label>
+        <select id="curtail"><option value="1">Solar gets switched off</option><option value="0">Solar still exports</option></select></div>
+    </div>
+
+    <h3>Fine-tuning</h3>
+    <div class="fields">
+      <div class="full"><label for="calYest">Calibrate: solar made yesterday (from mySigen)</label>
+        <div class="row2"><div class="unit"><input type="number" id="calYest" min="0" step="0.1" placeholder="kWh" inputmode="decimal"></div><button id="calBtn" class="btn">Calibrate</button></div>
+        <div id="calStatus" class="status"></div></div>
+      <div><label for="pr">Solar performance</label><div class="unit" data-unit="%"><input type="number" id="pr" min="30" max="100" step="1" value="80" inputmode="decimal"></div></div>
+      <div><label for="rte">Battery round trip</label><div class="unit" data-unit="%"><input type="number" id="rte" min="50" max="100" step="1" value="92" inputmode="decimal"></div></div>
+      <div class="full"><label for="model">Weather model</label>
+        <select id="model">
+          <option value="best_match">Best match</option><option value="bom_access_global">Bureau of Meteorology ACCESS-G</option>
+          <option value="ecmwf_ifs025">ECMWF IFS</option><option value="gfs_seamless">NOAA GFS</option>
+        </select></div>
+    </div>
+
+    <h3>Prices without Amber</h3>
+    <div class="fields">
+      <div><label for="peak">Normal rate</label><div class="unit" data-unit="c/kWh"><input type="number" id="peak" min="0" step="0.1" value="35" inputmode="decimal"></div></div>
+      <div><label for="offpeak">Overnight rate</label><div class="unit" data-unit="c/kWh"><input type="number" id="offpeak" min="0" step="0.1" value="20" inputmode="decimal"></div></div>
+      <div><label for="opStart">Overnight from</label><select id="opStart"></select></div>
+      <div><label for="opEnd">until</label><select id="opEnd"></select></div>
+      <div class="full"><label for="fit">Feed-in tariff</label><div class="unit" data-unit="c/kWh"><input type="number" id="fit" min="-50" step="0.1" value="5" inputmode="decimal"></div></div>
+    </div>
+  </details>
+
+  <footer>Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0). Prices from Amber Electric. Everything stays in this browser. It's a forecast, so treat close calls as close calls.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -414,7 +290,7 @@ const SHAPE = SHAPE_RAW.map((v) => v / SHAPE_SUM);
 const DAYS_AHEAD = 3;
 
 // ---------- settings ----------
-const FIELDS = ['soc','carNow','carTarget','plugIn','depart','parking','spikeProt','spikeC','pvKw','invKw','orient','tilt','batKwh','reserve','houseDaily','carKwh',
+const FIELDS = ['soc','carNow','carTarget','limitMode','plugIn','depart','parking','spikeProt','spikeC','pvKw','invKw','orient','tilt','batKwh','reserve','houseDaily','carKwh',
                 'evKw','evEff','curtail','peak','offpeak','opStart','opEnd','fit','pr','rte','model'];
 const STORE = 'battery-or-grid-v2';
 const HEAT_MIN = 50; // never suggest a limit below this
@@ -445,7 +321,6 @@ function load() {
     if (o.loc) loc = o.loc;
     homeTomorrow = !!o.homeTomorrow;
     amber.token = o.amberToken || ''; amber.siteId = o.amberSite || '';
-    $('sysCard').open = false;
   } catch (e) { /* ignore */ }
 }
 
@@ -607,17 +482,31 @@ function amberForget() {
 function readParams() {
   const batKwh = Math.max(0.1, num('batKwh'));
   const carKwh = Math.max(1, num('carKwh'));
-  const evNeed = Math.max(0, (clamp(num('carTarget'), 0, 100) - clamp(num('carNow'), 0, 100)) / 100 * carKwh);
+  // Charge limit: the heat rule (tomorrow's top temperature) unless set to fixed or parked undercover.
+  const tmax = tomorrowTmax(), parkedOut = $('parking').value === 'out';
+  let target = clamp(Math.round(num('carTarget')), 0, 100), targetWhy = 'your fixed limit';
+  if ($('limitMode').value === 'heat') {
+    if (parkedOut && tmax != null) { target = heatLimit(tmax); targetWhy = `heat rule, ${Math.round(tmax)}°C tomorrow`; }
+    else if (!parkedOut) targetWhy = 'parked undercover';
+  }
+  const evNeed = Math.max(0, (target - clamp(num('carNow'), 0, 100)) / 100 * carKwh);
   return {
     pvKw: num('pvKw'), invKw: num('invKw') > 0 ? num('invKw') : Infinity, pr: clamp(num('pr'), 1, 100) / 100,
     batKwh, batKw: num('invKw') > 0 ? num('invKw') : Infinity, reserveE: batKwh * clamp(num('reserve'), 0, 100) / 100,
     rte: clamp(num('rte'), 50, 100) / 100, socE: batKwh * clamp(num('soc'), 0, 100) / 100,
-    houseDaily: num('houseDaily'), carKwh, evNeed, evKw: Math.max(1, num('evKw')), evEff: clamp(num('evEff'), 50, 100) / 100,
+    houseDaily: num('houseDaily'), carKwh, evNeed, target, targetWhy, evKw: Math.max(1, num('evKw')), evEff: clamp(num('evEff'), 50, 100) / 100,
     plugIn: parseInt($('plugIn').value, 10), depart: parseInt($('depart').value, 10), curtail: $('curtail').value === '1',
     peak: num('peak'), offpeak: num('offpeak'), fit: num('fit'),
     opStart: parseInt($('opStart').value, 10), opEnd: parseInt($('opEnd').value, 10), home: homeTomorrow,
-    spikeProt: $('spikeProt').value === '1', spikeC: num('spikeC'), parkedOut: $('parking').value === 'out',
+    spikeProt: $('spikeProt').value === '1', spikeC: num('spikeC'), parkedOut,
   };
+}
+function tomorrowTmax() {
+  if (!forecast) return null;
+  const d = addDays(nowLocal().date, 1);
+  let t = -Infinity;
+  forecast.steps.forEach((s) => { if (s.date === d && s.hod >= 8 && s.hod <= 18 && s.temp != null) t = Math.max(t, s.temp); });
+  return t > -Infinity ? t : null;
 }
 const inWindow = (h, a, b) => a === b ? false : (a < b ? h >= a && h < b : h >= a || h < b);
 const pvAt = (gti, p) => Math.min((gti / 1000) * p.pvKw * p.pr, p.invKw);
@@ -775,17 +664,17 @@ function analyse() {
   const lastStart = Math.max(H.plug, H.leave - hoursNeeded);
   // A: battery allowed to feed the car
   const Aopt = bestBlock(p, H, P, wall, H.plug, lastStart, true);
-  opts.push({ key: 'batt', name: 'Battery on', color: cssVar('--series-a'), r: Aopt.r, start: Aopt.start });
+  opts.push({ key: 'batt', name: 'Use battery', color: cssVar('--series-a'), r: Aopt.r, start: Aopt.start });
   // B: battery off, grid only
   const B = bestBlock(p, H, P, wall, H.plug, lastStart, false);
-  opts.push({ key: 'grid', name: 'Battery off, grid overnight', color: cssVar('--series-b'), r: B.r, start: B.start });
+  opts.push({ key: 'grid', name: 'Use grid', color: cssVar('--series-b'), r: B.r, start: B.start });
   // C: home tomorrow → charge from solar in the cheapest daytime block
   if (p.home) {
     let d0 = -1, d1 = -1;
     for (let i = H.i0; i <= H.i1; i++) if (st[i].date === H.days[0]) { if (st[i].hod === 8) d0 = i; if (st[i].hod === 17) d1 = i; }
     if (d0 >= 0 && d1 > d0) {
       const C = bestBlock(p, H, P, wall, d0, Math.max(d0, d1 - hoursNeeded), false);
-      opts.push({ key: 'solar', name: 'Wait, charge from solar tomorrow', color: cssVar('--series-c'), r: C.r, start: C.start });
+      opts.push({ key: 'solar', name: 'Sun tomorrow', color: cssVar('--series-c'), r: C.r, start: C.start });
     }
   }
 
@@ -833,215 +722,179 @@ function spikeWindows(A, from, to) {
     label: `${st[w.start].date === A.H.today ? 'tonight' : dayName(st[w.start].date)} ${hourLbl(st[w.start].hod)}–${hourLbl(st[w.end].hod + 1)}` }));
 }
 
-function renderHeat(A) {
-  const el = $('heatHint');
-  const d1 = A ? A.days[0] : null;
-  if (!d1 || d1.tmax == null) { el.innerHTML = ''; return null; }
-  const day = dayName(d1.date, true);
-  if (!A.p.parkedOut) { el.innerHTML = `Parked undercover ${day}, so the heat rule doesn't apply (top ${Math.round(d1.tmax)}°C).`; return null; }
-  const lim = heatLimit(d1.tmax);
-  const cur = clamp(num('carTarget'), 0, 100);
-  el.innerHTML = `Heat rule: ${day} tops out around <b>${Math.round(d1.tmax)}°C</b>, so charge to <b>${lim}%</b>. ` +
-    (cur === lim ? '✓' : `<button type="button" id="useHeat" style="padding:3px 8px;margin-left:4px">Use ${lim}%</button>`);
-  const b = $('useHeat');
-  if (b) b.onclick = () => { $('carTarget').value = lim; updateCarLbl(); save(); run(); };
-  return { lim, tmax: d1.tmax, day };
-}
-
 // ---------- render ----------
 let charts = {};
-function run() {
-  if (!forecast) return;
-  $('emptyState').hidden = true; $('output').hidden = false;
-  const A = analyse();
-  A.heat = renderHeat(A);
-  renderVerdict(A); renderDays(A); renderTable(A); renderCharts(A);
-}
+const pctOf = (e, p) => Math.round((e / p.batKwh) * 100) + '%';
+const sky = (c) => (c == null ? '🌤️' : c < 25 ? '☀️' : c < 60 ? '⛅' : '☁️');
 
-function renderVerdict(A) {
-  const { p, best, opts, days, H, P } = A;
-  const el = $('verdict');
-  const pct = (e) => Math.round((e / p.batKwh) * 100) + '%';
-  const d1 = days[0];
-  const tom = dayName(H.days[0], true);
-  const tag = `<span class="tag">Tonight${loc ? ' · ' + escapeHtml(loc.name) : ''}${P.anyReal ? ' · Amber prices' : ' · estimated prices'}</span>`;
+function run() {
+  updateCarNote();
+  if (!forecast) { $('setup').hidden = false; $('output').hidden = true; return; }
+  $('setup').hidden = true; $('output').hidden = false;
+  const A = analyse();
+  const d = new Date(Date.now() + forecast.offset * 1000);
+  $('when').textContent = 'Tonight · ' + d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  renderAnswer(A);
+  renderWhy(A);
+  if ($('detailsCard').open) renderDetails(A);
+  lastA = A;
+}
+let lastA = null;
+
+function renderAnswer(A) {
+  const { p, best, opts, H, P } = A;
+  const el = $('answer');
+  const src = P.anyReal ? 'Using Amber prices' : 'Estimated prices (connect Amber in Settings)';
   if (p.evNeed <= 0.05) {
-    el.className = 'verdict';
-    el.innerHTML = `${tag}<h3>Nothing to charge</h3><p>Set the car's current charge and where you want it.</p>`;
+    el.className = 'answer';
+    el.innerHTML = `<div class="src">${src}</div><h3>Car's already at ${p.target}%</h3><p class="save">No need to charge tonight.</p>`;
     return;
   }
   const others = opts.filter((o) => o !== best);
-  const margin = Math.min(...others.map((o) => o.eff)) - best.eff;
+  const runnerUp = others.reduce((a, b) => (b.eff < a.eff ? b : a));
+  const margin = runnerUp.eff - best.eff;
   const close = margin < 0.5;
-  const batt = opts.find((o) => o.key === 'batt'), grid = opts.find((o) => o.key === 'grid');
-  const startLbl = (o) => hourLbl(forecast.steps[o.start].hod);
-  const cloudTxt = d1.cloud == null ? '' : `, ${Math.round(d1.cloud)}% cloud`;
-  let cls, title, action, lead;
-  const bullets = [];
+  const at = (h) => (h === 0 ? 'at midnight' : `at ${hourLbl(h)}`);
+  const startTxt = (o) => (o.start === H.plug ? 'when you plug in' : at(forecast.steps[o.start].hod));
+  const plainName = { batt: 'using the battery', grid: 'charging from the grid', solar: 'waiting for the sun' };
 
+  let cls, title, steps;
   if (best.key === 'batt') {
-    cls = close ? 'mid' : 'good';
-    title = close ? "Battery on, but it's close" : 'Let the battery charge the car';
-    action = `SmartShift: allow the battery to charge the EV. ${batt.start === H.plug ? 'Start charging when you plug in.' : `Schedule the Tesla to start at ${startLbl(batt)}.`}`;
-    const full = batt.r.fullAt[H.days[0]];
-    const refills = full != null || (batt.r.peakDay[H.days[0]] || 0) >= (grid.r.peakDay[H.days[0]] || 0) - 0.05 * p.batKwh;
-    lead = (refills ? `${tom} looks good: about ${fmt(d1.pv, 0)} kWh of solar${cloudTxt}. `
-                    : `${tom} is weak (about ${fmt(d1.pv, 0)} kWh of solar${cloudTxt}), but the overnight battery energy is still worth more in the car than sitting there. `) +
-      (full != null ? `Even after the car takes ${fmt(batt.r.carFromBatt * p.evEff, 0)} kWh, the battery should be full again by about ${hourLbl(full)}.`
-                    : `The battery should get back to about ${pct(batt.r.peakDay[H.days[0]] || 0)} (vs ${pct(grid.r.peakDay[H.days[0]] || 0)} if you don't use it).`);
-    if (grid.r.curt - batt.r.curt > 0.5) bullets.push(`About ${fmt(grid.r.curt - batt.r.curt, 0)} kWh of solar that would otherwise be curtailed (negative feed-in) goes into refilling the battery instead. That energy is free.`);
-    const covered = batt.r.carFromBatt * p.evEff;
-    if (covered < p.evNeed - 1) bullets.push(`The battery covers about ${fmt(covered, 0)} of the ${fmt(p.evNeed, 0)} kWh before it hits your reserve. The grid does the rest.`);
+    cls = 'good'; title = 'Use the battery tonight';
+    steps = [`In SmartShift, let the battery charge the car: <b>on</b>.`, `In the Tesla app, start charging <b>${startTxt(best)}</b>.`];
   } else if (best.key === 'grid') {
-    cls = close ? 'mid' : 'bad';
-    title = close ? "Battery off, but it's close" : 'Charge from the grid tonight';
-    action = `SmartShift: don't let the battery charge the EV. Schedule the Tesla to start at ${startLbl(grid)}.`;
-    const bPeak = batt.r.peakDay[H.days[0]] || 0, gPeak = grid.r.peakDay[H.days[0]] || 0;
-    if (bPeak < gPeak - 0.05 * p.batKwh) {
-      lead = `${tom}'s solar won't refill it: about ${fmt(d1.pv, 0)} kWh${cloudTxt}. If the car drains the battery tonight it only gets back to about ${pct(bPeak)}, so you'd buy more power later at higher prices.`;
-    } else {
-      const later = days.slice(1).find((d) => (batt.r.endDay[d.date] || 0) < (grid.r.endDay[d.date] || 0) - 0.05 * p.batKwh);
-      lead = later
-        ? `${tom} would refill most of it, but ${dayName(later.date, true)} looks poor (${fmt(later.pv, 0)} kWh of solar), and you'd feel the shortfall then.`
-        : `Overnight grid power is cheap enough that keeping the battery for the house's evening use comes out ahead.`;
-    }
+    cls = 'bad'; title = 'Use the grid tonight';
+    steps = [`In SmartShift, let the battery charge the car: <b>off</b>.`, `In the Tesla app, start charging <b>${startTxt(best)}</b>.`];
   } else {
-    cls = close ? 'mid' : 'info';
-    title = close ? "Wait for solar tomorrow, but it's close" : "Don't charge tonight, use tomorrow's sun";
-    const so = opts.find((o) => o.key === 'solar');
-    action = `Schedule the Tesla to start at ${startLbl(so)} ${dayName(H.days[0])}. Keep the battery off for the EV.`;
-    lead = `You're home ${tom} with about ${fmt(d1.pv, 0)} kWh of solar${cloudTxt}. About ${fmt(so.r.carFromSolar * p.evEff, 0)} kWh can go straight from the panels into the car, and midday grid prices are low.`;
+    cls = 'info'; title = 'Wait, charge from the sun tomorrow';
+    steps = [`In SmartShift, let the battery charge the car: <b>off</b>.`, `In the Tesla app, start charging at <b>${hourLbl(forecast.steps[best.start].hod)} ${dayName(H.days[0])}</b>.`];
   }
+  steps.push(`Set the charge limit to <b>${p.target}%</b>.`);
+  if (close) cls = 'mid';
 
-  // Spike risk between now and the end of tomorrow
-  const endTom = (() => { let k = H.i0; for (let i = H.i0; i <= H.i1; i++) if (forecast.steps[i].date <= H.days[0]) k = i; return k; })();
-  const wins = spikeWindows(A, H.i0, endTom);
-  if (wins.length) {
-    const w = wins.reduce((a, b) => (b.max > a.max ? b : a));
-    const list = wins.slice(0, 3).map((x) => x.label).join(', ');
-    if (p.spikeProt && best.key === 'batt') {
-      const car = block(forecast.steps.length, batt.start, H.i1, A.wall, p.evKw);
-      let held = 0; car.forEach((k, i) => { if (k > 0) held = Math.max(held, P.guard[i]); });
-      bullets.push(`<b>Price spike risk</b> ${list} (up to about ${cents(w.max)}). ` + (held > 0.5
-        ? `The battery holds back about ${fmt(held, 0)} kWh for the house to get through it, and the car doesn't get that energy.`
-        : `The car only gets battery energy the house won't need before solar refills it, so you're covered.`));
-    }
-    else if (p.spikeProt) bullets.push(`<b>Price spike risk</b> ${list} (up to about ${cents(w.max)}). Keeping the battery for the house covers it.`);
-    else bullets.push(`<b>Price spike risk</b> ${list} (up to about ${cents(w.max)}). Spike protection is off.`);
-  }
-  if (A.heat) {
-    const t = clamp(num('carTarget'), 0, 100);
-    action += ` Charge limit ${A.heat.lim}% (${Math.round(A.heat.tmax)}°C ${A.heat.day}).`;
-    if (t > A.heat.lim) bullets.push(`You've asked for ${t}%, which is above the heat-rule ${A.heat.lim}% for ${A.heat.day}.`);
-  }
-
-  bullets.unshift(`Saves about <b>${money(Math.max(0, margin))}</b> compared with ${others.length === 1 ? 'the other option' : 'the next best option'}.`);
-  if (best.key === 'batt') {
-    const later = days.slice(1).find((d) => (batt.r.endDay[d.date] || 0) < (grid.r.endDay[d.date] || 0) - 0.08 * p.batKwh);
-    if (later) bullets.push(`Heads up: ${dayName(later.date, true)} looks poor, so the battery will run lower then than if you'd charged from the grid. It's still cheaper overall.`);
-  }
-  if (best.key !== 'batt' && grid && best.key === 'grid') {
-    const avgC = avgPrice(grid, A);
-    if (avgC != null) bullets.push(`The cheapest block before you leave averages about ${cents(avgC)} a kWh.`);
-  }
-  if (!P.anyReal) bullets.push('Using estimated prices. Connect Amber for real ones.');
-  else if (days.slice(1).some((d) => !d.realPrices)) bullets.push("Amber's forecast doesn't reach the later days, so those use the typical price for each time of day.");
-  if (p.batKw < p.evKw + 2 && best.key === 'batt') bullets.push(`The inverter (${fmt(p.batKw, 0)} kW) can't cover ${fmt(p.evKw, 0)} kW of car charging plus the house, so some will come from the grid.`);
-
-  el.className = 'verdict ' + cls;
-  el.innerHTML = `${tag}<h3>${title}</h3><div class="action">${action}</div><p>${lead}</p><ul>${bullets.map((b) => `<li>${b}</li>`).join('')}</ul>`;
+  const save = close
+    ? `Close call. Only ${money(Math.max(0, margin))} in it, so either is fine.`
+    : `Saves about ${money(margin)} compared with ${plainName[runnerUp.key]}.`;
+  el.className = 'answer ' + cls;
+  el.innerHTML = `<div class="src">${src}</div><h3>${title}</h3><p class="save">${save}</p><ol>${steps.map((s) => `<li><span>${s}</span></li>`).join('')}</ol>`;
 }
 
-function avgPrice(o, A) {
-  const { p, P } = A; let s = 0, n = 0;
-  const car = block(forecast.steps.length, o.start, A.H.i1, A.wall, p.evKw);
-  car.forEach((k, i) => { if (k > 0) { s += P.imp[i] * k; n += k; } });
-  return n ? s / n : null;
-}
-
-function renderDays(A) {
-  const { p, days, opts, best } = A;
+function renderWhy(A) {
+  const { p, best, opts, days, H, P } = A;
   const batt = opts.find((o) => o.key === 'batt'), grid = opts.find((o) => o.key === 'grid');
-  const sky = (c) => c == null ? '' : c < 25 ? '☀️' : c < 60 ? '⛅' : '☁️';
-  const bar = (label, e, color) => `<div class="bar"><span>${label}</span><span class="track"><span class="fill" style="display:block;width:${clamp(e / p.batKwh * 100, 0, 100)}%;background:${color}"></span></span><span class="v">${Math.round(e / p.batKwh * 100)}%</span></div>`;
-  $('days').innerHTML = days.filter((d) => d.any).map((d) => `
-    <div class="day">
-      <span class="sky" aria-hidden="true">${sky(d.cloud)}</span>
-      <div class="d">${dayName(d.date, true)}</div>
-      <div class="big">${fmt(d.pv, 0)} kWh</div>
-      <div class="meta">solar · ${d.cloud == null ? '–' : Math.round(d.cloud) + '% cloud'}${d.eveningPrice != null ? ` · evening ${cents(d.eveningPrice)}` : ''}${d.realPrices ? '' : ' (est.)'}</div>
-      <div class="bars">
-        <div class="meta">Battery peak</div>
-        ${bar('Battery on', batt.r.peakDay[d.date] || 0, batt.color)}
-        ${bar('Battery off', grid.r.peakDay[d.date] || 0, grid.color)}
-      </div>
-    </div>`).join('');
+  const d1 = days[0], tom = dayName(H.days[0], true);
+  const rows = [];
+
+  // 1. Will the sun refill the battery?
+  const bPeak = batt.r.peakDay[H.days[0]] || 0, gPeak = grid.r.peakDay[H.days[0]] || 0;
+  const full = batt.r.fullAt[H.days[0]];
+  const solarHead = `${tom}: ${fmt(d1.pv, 0)} kWh of sun${d1.cloud != null ? `, ${Math.round(d1.cloud)}% cloud` : ''}`;
+  let solarBody;
+  if (best.key === 'solar') solarBody = `About ${fmt(best.r.carFromSolar * p.evEff, 0)} kWh can go from the panels straight into the car.`;
+  else if (full != null) solarBody = `Even if the car uses the battery tonight, it's full again by ${hourLbl(full)}.`;
+  else if (bPeak >= gPeak - 0.05 * p.batKwh) solarBody = `The battery gets back to about ${pctOf(bPeak, p)} either way.`;
+  else solarBody = `Not enough to refill it. If the car uses the battery tonight, it only gets back to ${pctOf(bPeak, p)} (vs ${pctOf(gPeak, p)}).`;
+  rows.push([sky(d1.cloud), solarHead, solarBody]);
+
+  // 2. Prices: tonight's grid vs what refilling from solar costs
+  const carSteps = block(forecast.steps.length, grid.start, H.i1, A.wall, p.evKw);
+  let gs = 0, gn = 0; carSteps.forEach((k, i) => { if (k > 0) { gs += P.imp[i] * k; gn += k; } });
+  const gridC = gn ? gs / gn : null;
+  let fs = 0, fn = 0;
+  for (let i = H.i0; i <= H.i1; i++) if (forecast.steps[i].date === H.days[0] && forecast.steps[i].hod >= 9 && forecast.steps[i].hod < 16) { fs += P.fin[i]; fn++; }
+  const feedC = fn ? fs / fn : null;
+  if (gridC != null && feedC != null) {
+    const refill = feedC < 0 && p.curtail ? 'nothing (feed-in is negative, so spare solar would just be switched off)' : `about ${cents(Math.max(0, feedC))} a kWh (the feed-in you'd give up)`;
+    rows.push(['💲', `Grid power overnight: about ${cents(gridC)} a kWh`, `Refilling the battery from tomorrow's sun costs ${refill}.`]);
+  }
+
+  // 3. Price spikes
+  let endTom = H.i0; for (let i = H.i0; i <= H.i1; i++) if (forecast.steps[i].date <= H.days[0]) endTom = i;
+  const wins = spikeWindows(A, H.i0, endTom);
+  if (!wins.length) rows.push(['✅', 'No price spikes expected', 'Nothing between now and tomorrow night looks risky.']);
+  else {
+    const w = wins.reduce((a, b) => (b.max > a.max ? b : a));
+    let body;
+    if (!p.spikeProt) body = 'Spike protection is off in Settings.';
+    else if (best.key === 'batt') {
+      const car = block(forecast.steps.length, best.start, H.i1, A.wall, p.evKw);
+      let held = 0; car.forEach((k, i) => { if (k > 0) held = Math.max(held, P.guard[i]); });
+      body = held > 0.5 ? `The battery keeps about ${fmt(held, 0)} kWh back for the house to get through it.` : `The battery will still have plenty for the house by then.`;
+    } else body = 'Keeping the battery for the house covers it.';
+    rows.push(['⚡', `Price spike risk ${w.label}, up to about $${(w.max / 100).toFixed(2)}/kWh`, body]);
+  }
+
+  // 4. The next couple of days
+  const later = days.slice(1).filter((d) => d.any);
+  if (later.length) {
+    const line = later.map((d) => `${dayName(d.date)} ${sky(d.cloud)} ${fmt(d.pv, 0)} kWh`).join(' · ');
+    const hurt = best.key === 'batt' && later.find((d) => (batt.r.endDay[d.date] || 0) < (grid.r.endDay[d.date] || 0) - 0.08 * p.batKwh);
+    const body = hurt ? `${dayName(hurt.date, true)} looks poor, so the battery runs lower then. It still works out cheaper overall.`
+      : best.key === 'grid' && !(bPeak < gPeak - 0.05 * p.batKwh) ? 'Saving the battery now leaves you better placed for these days.'
+      : "These don't change tonight's answer.";
+    rows.push(['📅', line, body]);
+  }
+
+  $('why').innerHTML = rows.map(([ic, h, b]) => `<div class="row"><div class="ic" aria-hidden="true">${ic}</div><div><b>${h}</b><span>${b}</span></div></div>`).join('');
 }
 
-function renderTable(A) {
-  const { p, opts, best } = A;
-  const rows = opts.map((o) => `<tr class="${o === best ? 'best' : ''}">
-    <td><span class="dot" style="background:${o.color}"></span>${o.name}${o === best ? ' ✓' : ''}</td>
-    <td>${fmt(o.r.carFromBatt * p.evEff, 1)}</td>
-    <td>${fmt(o.r.imp, 1)}</td>
-    <td>${fmt(o.r.exp, 1)}</td>
-    <td>${fmt(o.r.curt, 1)}</td>
-    <td>${money(o.r.cost)}</td>
-    <td>${money(o.eff)}</td></tr>`).join('');
-  $('cmpTable').innerHTML = `<thead><tr><th>Option</th><th>Car from battery<br>kWh</th><th>Bought<br>kWh</th><th>Exported<br>kWh</th><th>Curtailed<br>kWh</th><th>Grid cost</th><th>Effective cost</th></tr></thead><tbody>${rows}</tbody>`;
-}
+function renderDetails(A) {
+  const { p, opts, best, H, P } = A;
+  // table
+  $('cmpTable').innerHTML = `<thead><tr><th>Option</th><th>Car from<br>battery</th><th>Bought<br>kWh</th><th>Exported<br>kWh</th><th>Switched off<br>kWh</th><th>Effective<br>cost</th></tr></thead><tbody>` +
+    opts.map((o) => `<tr class="${o === best ? 'best' : ''}"><td><span class="dot" style="background:${o.color}"></span>${o.name}</td>
+      <td>${fmt(o.r.carFromBatt * p.evEff, 1)}</td><td>${fmt(o.r.imp, 1)}</td><td>${fmt(o.r.exp, 1)}</td><td>${fmt(o.r.curt, 1)}</td><td>${money(o.eff)}</td></tr>`).join('') + '</tbody>';
 
-function renderCharts(A) {
   if (typeof Chart === 'undefined') return;
-  const { p, opts, H, P } = A;
   const st = forecast.steps;
   const muted = cssVar('--muted'), gridC = cssVar('--border');
   Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
   Chart.defaults.color = muted;
   const idx = []; for (let i = H.i0; i <= H.i1; i++) idx.push(i);
-  const labels = idx.map((i) => st[i].hod === 0 ? dayName(st[i].date) : hourLbl(st[i].hod));
-  const base = {
-    responsive: true, maintainAspectRatio: false, animation: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: { legend: { labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true } } },
-  };
-  const xAxis = { grid: { display: false }, ticks: { autoSkip: true, maxTicksLimit: 9, maxRotation: 0 } };
+  const labels = idx.map((i) => (st[i].hod === 0 ? dayName(st[i].date) : hourLbl(st[i].hod)));
+  const base = { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true } } } };
+  const xAxis = { grid: { display: false }, ticks: { autoSkip: true, maxTicksLimit: 7, maxRotation: 0 } };
   const draw = (id, cfg) => { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($(id), cfg); };
+
+  draw('socChart', { type: 'line',
+    data: { labels, datasets: opts.map((o) => ({ label: o.name, data: o.r.soc.map((v) => +v.toFixed(1)), borderColor: o.color, backgroundColor: o.color, pointRadius: 0, borderWidth: 2.5, tension: 0.25 })) },
+    options: { ...base, scales: { x: xAxis, y: { min: 0, max: 100, grid: { color: gridC }, ticks: { callback: (v) => v + '%' } } },
+      plugins: { ...base.plugins, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${Math.round(c.parsed.y)}%` } } } } });
+
+  $('priceTitle').textContent = P.anyReal ? 'Prices (Amber; dashed = estimated)' : 'Prices (estimated)';
+  const seg = { borderDash: (c) => (P.real[idx[c.p1DataIndex]] ? undefined : [5, 4]) };
+  draw('priceChart', { type: 'line',
+    data: { labels, datasets: [
+      { label: 'Buy', data: idx.map((i) => +P.imp[i].toFixed(1)), borderColor: cssVar('--series-import'), backgroundColor: cssVar('--series-import'), pointRadius: 0, borderWidth: 2, stepped: true, segment: seg },
+      { label: 'Feed-in', data: idx.map((i) => +P.fin[i].toFixed(1)), borderColor: cssVar('--series-feed'), backgroundColor: cssVar('--series-feed'), pointRadius: 0, borderWidth: 2, stepped: true, segment: seg },
+    ] },
+    options: { ...base, scales: { x: xAxis, y: { grid: { color: gridC }, title: { display: true, text: 'c/kWh' } } } } });
 
   draw('fcChart', {
     data: { labels, datasets: [
-      { type: 'bar', label: 'Solar (kWh)', data: idx.map((i) => +pvAt(st[i].gti, p).toFixed(2)), backgroundColor: cssVar('--series-solar'), borderRadius: 2, yAxisID: 'y', order: 2 },
-      { type: 'line', label: 'Cloud (%)', data: idx.map((i) => st[i].cloud), borderColor: cssVar('--series-cloud'), backgroundColor: cssVar('--series-cloud'), pointRadius: 0, borderWidth: 2, tension: 0.3, yAxisID: 'y2', order: 0 },
+      { type: 'bar', label: 'Solar kWh', data: idx.map((i) => +pvAt(st[i].gti, p).toFixed(2)), backgroundColor: cssVar('--series-solar'), borderRadius: 2, yAxisID: 'y', order: 2 },
+      { type: 'line', label: 'Cloud %', data: idx.map((i) => st[i].cloud), borderColor: cssVar('--series-cloud'), backgroundColor: cssVar('--series-cloud'), pointRadius: 0, borderWidth: 2, tension: 0.3, yAxisID: 'y2', order: 0 },
     ] },
-    options: { ...base, scales: { x: xAxis,
-      y: { beginAtZero: true, grid: { color: gridC }, title: { display: true, text: 'kWh' } },
-      y2: { position: 'right', min: 0, max: 100, grid: { display: false }, title: { display: true, text: 'cloud %' } } } },
-  });
+    options: { ...base, scales: { x: xAxis, y: { beginAtZero: true, grid: { color: gridC } },
+      y2: { position: 'right', min: 0, max: 100, grid: { display: false } } } } });
+}
 
-  $('priceSub').textContent = P.anyReal ? '· Amber forecast (dashed = estimated)' : '· estimated, connect Amber';
-  const seg = { borderDash: (c) => (P.real[idx[c.p1DataIndex]] ? undefined : [5, 4]) };
-  draw('priceChart', {
-    type: 'line',
-    data: { labels, datasets: [
-      { label: 'Buy (c/kWh)', data: idx.map((i) => +P.imp[i].toFixed(1)), borderColor: cssVar('--series-import'), backgroundColor: cssVar('--series-import'), pointRadius: 0, borderWidth: 2, stepped: true, segment: seg },
-      ...(idx.some((i) => P.hi[i] > P.imp[i] + 0.5) ? [{ label: 'Buy, high estimate', data: idx.map((i) => +P.hi[i].toFixed(1)), borderColor: cssVar('--series-import'), backgroundColor: cssVar('--series-import'), borderWidth: 1, borderDash: [2, 3], pointRadius: 0, stepped: true }] : []),
-      { label: 'Feed-in (c/kWh)', data: idx.map((i) => +P.fin[i].toFixed(1)), borderColor: cssVar('--series-feed'), backgroundColor: cssVar('--series-feed'), pointRadius: 0, borderWidth: 2, stepped: true, segment: seg },
-    ] },
-    options: { ...base, scales: { x: xAxis, y: { grid: { color: gridC }, title: { display: true, text: 'c/kWh' } } } },
-  });
-
-  draw('socChart', {
-    type: 'line',
-    data: { labels, datasets: opts.map((o) => ({ label: o.name, data: o.r.soc.map((v) => +v.toFixed(1)), borderColor: o.color, backgroundColor: o.color, pointRadius: 0, borderWidth: 2.5, tension: 0.25 })) },
-    options: { ...base, scales: { x: xAxis, y: { min: 0, max: 100, grid: { color: gridC }, ticks: { callback: (v) => v + '%' } } },
-      plugins: { ...base.plugins, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${Math.round(c.parsed.y)}%` } } } },
-  });
+function updateCarNote() {
+  $('socOut').textContent = $('soc').value + '%';
+  $('carNowOut').textContent = $('carNow').value + '%';
+  if (!forecast) { $('carNote').textContent = ''; return; }
+  const p = readParams();
+  const why = p.targetWhy ? ` (${p.targetWhy})` : '';
+  $('carNote').textContent = p.evNeed > 0.05
+    ? `Charging to ${p.target}%${why}: ${fmt(p.evNeed, 0)} kWh, about ${fmt(p.evNeed / p.evEff / p.evKw, 1)} hours.`
+    : `Charge limit tomorrow is ${p.target}%${why}.`;
 }
 
 // ---------- calibration ----------
 function calibrate() {
   const actual = num('calYest');
-  if (!forecast) { setStatus('calStatus', 'Load a forecast first.', 'err'); return; }
+  if (!forecast) { setStatus('calStatus', 'Set your location first.', 'err'); return; }
   if (actual <= 0) { setStatus('calStatus', "Enter yesterday's generation in kWh.", 'err'); return; }
   const yest = addDays(nowLocal().date, -1);
   const p = readParams();
@@ -1059,15 +912,11 @@ function calibrate() {
 
 // ---------- wire up ----------
 load();
-$('socOut').textContent = $('soc').value + '%';
-if (loc) $('locQuery').value = loc.name.split(',')[0];
 function setHome(v) { homeTomorrow = v; $('homeYes').setAttribute('aria-pressed', v); $('homeNo').setAttribute('aria-pressed', !v); }
 setHome(homeTomorrow);
-function updateCarLbl() {
-  const p = readParams();
-  $('carNeedLbl').textContent = `That's about ${fmt(p.evNeed, 1)} kWh into the car (${fmt(p.evNeed / p.evEff, 1)} kWh from the wall), roughly ${fmt(p.evNeed / p.evEff / p.evKw, 1)} hours at ${fmt(p.evKw, 0)} kW.`;
-}
-updateCarLbl();
+if (loc) $('locQuery').value = loc.name.split(',')[0];
+if (!loc || !amber.token) $('settingsCard').open = true;
+updateCarNote();
 
 $('locSearch').onclick = searchLoc;
 $('locQuery').addEventListener('keydown', (e) => { if (e.key === 'Enter') searchLoc(); });
@@ -1080,13 +929,13 @@ $('amberForget').onclick = amberForget;
 $('amberSiteSel').onchange = (e) => { amber.siteId = e.target.value; save(); amberPrices(); };
 $('homeYes').onclick = () => { setHome(true); save(); run(); };
 $('homeNo').onclick = () => { setHome(false); save(); run(); };
+$('detailsCard').addEventListener('toggle', () => { if ($('detailsCard').open && lastA) renderDetails(lastA); });
 
 let refetchTimer;
 FIELDS.forEach((f) => {
   const el = $(f);
   el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
-    if (f === 'soc') $('socOut').textContent = el.value + '%';
-    updateCarLbl(); save();
+    save();
     if (['tilt', 'orient', 'model'].includes(f)) { clearTimeout(refetchTimer); refetchTimer = setTimeout(fetchForecast, 500); }
     else run();
   });
@@ -1094,7 +943,6 @@ FIELDS.forEach((f) => {
 
 if (loc) fetchForecast();
 if (amber.token) { $('amberToken').value = amber.token; amberConnect(); }
-// Re-check prices when you come back to the tab after a while
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && prices && Date.now() - prices.fetchedAt > 15 * 60e3) amberPrices();
 });
