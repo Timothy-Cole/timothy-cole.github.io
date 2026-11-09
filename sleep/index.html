@@ -211,6 +211,7 @@ details.fold:not([open]) > summary::after { transform: rotate(-90deg); }
 details.fold[open] > summary { margin-bottom: 12px; }
 .badge { font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .badge.hot { background: var(--accent); color: var(--surface); }
+select { font: inherit; font-size: 18px; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); }
 input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); -webkit-appearance: none; appearance: none; }
 .setup { position: fixed; inset: 0; z-index: 60; background: var(--bg); overflow-y: auto; }
 .setup-inner { max-width: 520px; margin: 0 auto; padding: 32px 16px 48px; }
@@ -439,6 +440,11 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
         <div class="field"><label for="stdNap">Usual nap (min)</label><input type="number" id="stdNap" min="0" max="180" step="15"></div>
       </div>
       <div class="field">
+        <label for="noNap">No-nap days: asleep earlier by</label>
+        <select id="noNap"><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min (the whole nap)</option></select>
+        <div class="hint">Usual advice is 30–60 minutes earlier. Shorter naps move bedtime in proportion.</div>
+      </div>
+      <div class="field">
         <label for="sleepH">Sleep per 24h (hours, nap included)</label>
         <input type="number" id="sleepH" min="8" max="16" step="0.25">
         <div class="hint" id="sleepRec"></div>
@@ -470,15 +476,15 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       <p><strong>Her sleep.</strong> Settings holds how much sleep she needs per 24 hours, including her usual nap. Asleep by and wake-up stay that far apart: change one and the other moves with it. Changing the sleep amount or the nap moves asleep by and keeps wake-up where it is. With her birth month, Settings shows the recommended amount for her age (ranges from the American Academy of Sleep Medicine), so you can adjust it as she grows. Set the usual nap to 0 once she stops napping.</p>
       <p><strong>Tonight's bedtime.</strong> Asleep by is for a day with her usual nap. From there:</p>
       <ul>
-        <li><strong>No nap:</strong> 30 minutes earlier (unless she's stopped napping).</li>
-        <li><strong>Shorter or longer nap:</strong> every 3 minutes of nap more or less moves bedtime 1 minute. A 1-hour nap is 10 minutes earlier, and a 2-hour nap is 10 minutes later.</li>
+        <li><strong>No nap:</strong> earlier by the amount in Settings, 30 minutes to start with (unless she's stopped napping). The usual advice is 30–60 minutes earlier, because toddlers don't make up a missed nap minute for minute.</li>
+        <li><strong>Shorter or longer nap:</strong> moves bedtime in proportion. With a 1h 30m usual nap and 30 minutes for no nap, a 1-hour nap is 10 minutes earlier and a 2-hour nap is 10 minutes later.</li>
         <li><strong>Late nap:</strong> she needs about 5 hours awake after a nap, so a late nap pushes bedtime later.</li>
       </ul>
       <p>It always stays within 30 minutes of the setting, and never before 6:00pm. Tired and Wired can move one night by up to 45 minutes.</p>
       <p><strong>Wake her~ by</strong> is the earlier of her usual nap length and 5 hours before her usual bedtime.</p>
       <p><strong>Wired.</strong> A toddler who's wired at bedtime is often overtired, not undertired. After no nap, a nap under 45 minutes, or more than 5h 30m awake, the planner suggests keeping bedtime and calming things down instead of moving it later. After a decent nap, Wired moves bedtime 15 minutes later.</p>
       <p><strong>How far it moves.</strong> Tonight's bedtime never moves more than 45 minutes from her usual bedtime, whatever the naps and Tired or Wired taps add up to.</p>
-      <p><strong>Learning her patterns.</strong> The planner uses up to 14 recent nights since her usual bedtime last changed. It leaves out late nights (lights out 15+ minutes after the plan) and nights marked sick or off. It looks at:</p>
+      <p><strong>Learning her patterns.</strong> The planner uses up to 14 recent nights since her usual bedtime last changed. It leaves out late nights (lights out 30+ minutes after the plan) and nights marked sick or off. It looks at:</p>
       <ul>
         <li><strong>Settle time</strong> (lights out to asleep). 15–20 minutes is ideal. Regularly 30 minutes or more suggests she isn't tired enough yet. Under 10 minutes suggests she may be overtired.</li>
         <li><strong>Stalling.</strong> If most long settles involved stalling or calling out, that's about limits rather than tiredness, so bedtime isn't changed.</li>
@@ -489,7 +495,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       <p><strong>Bedtime fading.</strong> For long settling, lights out moves to when she's usually falling asleep anyway, so she drops off quickly. Then, every 4 nights, if she's settling in 20 minutes or less, it moves 15 minutes earlier until it's back at her original bedtime.</p>
       <p><strong>Ready to drop the nap?</strong> If she settles 15 minutes or more faster on no-nap days, the planner suggests trying quiet time instead. Long settling together with early waking or grumpy mornings usually means too much daytime sleep.</p>
       <p><strong>Night wakings.</strong> Tap "She's awake" when she wakes. A dim screen records the time and asks why she woke and what you did, then "She's back asleep" records how long she was awake. After 5 nights, the planner looks for the cause. It checks whether she mostly wants you (especially if one of you stays or she comes into your bed), wakes at the same time each night, has night terrors, needs the toilet, is scared, or wakes more after late nights. It then suggests a 10-night plan with a short script for the night screen, so whoever gets up responds the same way. Nights 2–4 are often worse before they get better. A star is earned for each night in her own bed. Frequent night terrors or regular snoring are flagged as worth raising with your GP.</p>
-      <p><strong>Always running late?</strong> If lights out is 15+ minutes late on 6 of the last 10 nights, the planner checks the mornings after. If she slept in and was mostly happy, it suggests a later day as a 4-night trial: a later wake-up and bedtime, no later than your latest wake-up for daycare days. If she still woke at her usual time, a later schedule would cost her~ sleep, so it suggests ways to make the evening fit instead, including a shorter routine (quiet time and bath no shorter than 15 minutes, books no shorter than 20).</p>
+      <p><strong>Always running late?</strong> If lights out is 30+ minutes late on 6 of the last 10 nights, the planner checks the mornings after. If she slept in and was mostly happy, it suggests a later day as a 4-night trial: a later wake-up and bedtime, no later than your latest wake-up for daycare days. If she still woke at her usual time, a later schedule would cost her~ sleep, so it suggests ways to make the evening fit instead, including a shorter routine (quiet time and bath no shorter than 15 minutes, books no shorter than 20).</p>
       <p><strong>The routine.</strong> It starts at dinner (screens off), then quiet time to digest, then bath, books and lights out. The planner works back from the asleep-by time to tell you when to start dinner.</p>
       <p><strong>Catch-up routine.</strong> If you're late, tap "Starting dinner now" or "Starting bath now". Quiet time is cut down to 15 minutes, then dinner to 30, books to 15 and the bath to 10, keeping the same order, to get lights out as close to the plan as possible. If she's also wired after a good nap, each Wired tap still adds 15 minutes of books.</p>
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. Awake times, settle times and the early-waking signs are common advice from sleep consultants, not official guidelines. This is a guide only. Your child's own cues come first.</p>
@@ -541,10 +547,10 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
   const EARLIEST_BED = 18 * 60;    // 6:00pm floor
   const LATE_BED = 20 * 60 + 30;   // flag anything after 8:30pm
   const LATE_NAP_END = 15 * 60 + 30;
-  const LATE_LIGHTS = 15;          // lights out this late = night not used for learning
+  const LATE_LIGHTS = 30;          // lights out this late = night not used for learning (15 min off is a normal evening)
   const EARLY_WAKE = 6 * 60;       // waking before 6:00am counts as early; 6-7am is normal at 3
   const stdNap = () => (Number.isFinite(+S.stdNap) ? +S.stdNap : 90);   // her usual nap; asleep-by is for a day with this nap
-  const NO_NAP_EARLIER = 30;       // no nap: this much earlier than usual
+  const noNapEarlier = () => (Number.isFinite(+S.noNapEarlier) ? +S.noNapEarlier : 30);   // no nap: this much earlier than usual
   const MAX_SWING = 45;            // tonight never moves more than this from her usual bedtime
   const TRIAL_NIGHTS = 4;          // nights a change runs before the check-in
   const LONG_SETTLE = 30, FAST_SETTLE = 10;
@@ -649,19 +655,21 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       napLen = napEnd - napStart;
     }
 
-    // Nap length moves bedtime from her usual time: no nap is 30 min earlier, and every 3 minutes
+    // Nap length moves bedtime from her usual time: no nap moves it by the no-nap setting, and
     // of nap more or less than her usual nap moves it 1 minute. Once she's stopped napping, no nap is normal.
     const usual = stdNap();
-    const napAdj = napStart === null ? (usual ? -NO_NAP_EARLIER : 0) : round5((napLen - usual) / 3);
+    // Scale: missing her whole usual nap moves bedtime by the no-nap amount; part of a nap moves it in proportion.
+    const k = usual ? noNapEarlier() / usual : 1 / 3;
+    const napAdj = napStart === null ? (usual ? -noNapEarlier() : 0) : round5((napLen - usual) * k);
     const byNap = anchor + napAdj;
     const byWindow = napStart !== null ? napEnd + WAKE_WINDOW : -Infinity;   // late naps
     const lateNap = round5(byWindow) > byNap;
     const raw = round5(Math.max(byNap, byWindow));
-    const lo = anchor - ANCHOR_FLEX, hi = anchor + ANCHOR_FLEX;
+    const lo = anchor - Math.max(ANCHOR_FLEX, noNapEarlier()), hi = anchor + ANCHOR_FLEX;
     let base = Math.min(hi, Math.max(lo, raw));
 
     let why;
-    if (napStart === null) why = usual ? `No nap, so ${NO_NAP_EARLIER} min earlier than usual.` : "Her usual bedtime.";
+    if (napStart === null) why = usual ? `No nap, so ${noNapEarlier()} min earlier than usual.` : "Her usual bedtime.";
     else if (lateNap) why = raw > hi
       ? `Late nap, so held at the latest (${fmt(hi)}). She may take longer to settle.`
       : `Late nap, so later: she needs about 5 hours awake after it.`;
@@ -956,7 +964,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
   function syncInputs() {
     ["wake", "napStart", "napEnd", "actual", "lightsOut"].forEach((id) => { $(id).value = cur[id] || ""; });
     ["targetWake", "anchorBed", "latestWake", "dinner", "digest", "bath", "books", "settle"].forEach((id) => { if (document.activeElement !== $(id)) $(id).value = S[id]; });
-    $("stdNap").value = stdNap(); $("birthMonth").value = S.birthMonth || "";
+    $("stdNap").value = stdNap(); $("birthMonth").value = S.birthMonth || ""; $("noNap").value = String(noNapEarlier());
     renderSleepSettings();
     $("nightAwake").value = cur.nightAwake || "";
   }
@@ -1011,7 +1019,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
 
     const p = patterns();
     const anchor = toMin(S.anchorBed);
-    const lo45 = anchor - MAX_SWING, hi45 = anchor + MAX_SWING;
+    const lo45 = anchor - Math.max(MAX_SWING, noNapEarlier() + 15), hi45 = anchor + MAX_SWING;
     const want = r.base + (cur.nudge || 0);
     const asleep = Math.min(hi45, Math.max(lo45, want));
     // keep the nudge to what actually applies, so taps past the limit don't pile up
@@ -1764,6 +1772,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       if (["she", "he", "they"].includes(d.pronoun)) S.pronoun = d.pronoun;
       state.setupDone = true;
       if (typeof d.birthMonth === "string" && /^\d{4}-\d{2}$/.test(d.birthMonth)) S.birthMonth = d.birthMonth;
+      if ([15, 30, 45, 60, 90].includes(d.noNapEarlier)) S.noNapEarlier = d.noNapEarlier;
       if (typeof d.stdNap === "number" && d.stdNap >= 0 && d.stdNap <= 180) S.stdNap = d.stdNap;
       ["dinner", "digest", "bath", "books", "settle"].forEach((f) => { if (typeof d[f] === "number" && d[f] >= 0 && d[f] <= 900) S[f] = d[f]; });
       const tr = data.trial;
@@ -1809,6 +1818,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     const n = parseInt($("stdNap").value, 10); if (!(n >= 0 && n <= 180)) return;
     const total = totalSleep(); S.stdNap = n; setTotal(total);   // same sleep per day: a shorter nap means an earlier bedtime
   });
+  $("noNap").addEventListener("change", () => { S.noNapEarlier = parseInt($("noNap").value, 10); save(); calc(!!state.log[day]); });
   $("birthMonth").addEventListener("change", () => { S.birthMonth = /^\d{4}-\d{2}$/.test($("birthMonth").value) ? $("birthMonth").value : ""; save(); renderSleepSettings(); });
   $("useRec").addEventListener("click", () => setTotal(recSleep(ageMonths()).mid));
   ["dinner", "digest", "bath", "books", "settle"].forEach((id) => $(id).addEventListener("input", () => { const n = parseInt($(id).value, 10); if (Number.isFinite(n) && n >= 0) { S[id] = n; save(); calc(!!state.log[day]); } }));
