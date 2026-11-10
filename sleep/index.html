@@ -1005,7 +1005,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     if (cur.wiredOT) {
       const d = el("div", "ot");
       d.append(el("b", null, "She's probably overtired, not undertired."));
-      d.append(`Because ${cur.wiredOT}, keep bedtime as it is. Dim the lights, keep books quiet and skip rough play.`);
+      d.append(`Because ${cur.wiredOT}, keep bedtime as it is. Dim the lights, skip rough play, and read calm, familiar books in a soft voice.`);
       const acts = el("div", "acts");
       const anyway = el("button", "linkbtn", "Move 15 min later anyway");
       anyway.onclick = () => { cur.wiredOT = ""; cur.nudge = Math.min(60, nudge + 15); calc(true); };
