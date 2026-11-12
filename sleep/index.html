@@ -41,7 +41,7 @@
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
 .wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; }
 h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
 .sub { color: var(--muted); margin: 0 0 20px; }
@@ -230,6 +230,18 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
 .nm-check p { margin: 0 0 10px; }
 .nm-check input { background: #000; color: #c98a5a; border-color: #3a2416; }
 #shareInBody p { font-size: 16px; margin: 0 0 12px; }
+details.adjust { margin-top: 12px; font-size: 15px; color: inherit; }
+details.adjust > summary { color: var(--accent); cursor: pointer; text-decoration: underline; list-style: none; display: inline-block; }
+details.adjust > summary::-webkit-details-marker { display: none; }
+details.adjust[open] > summary { margin-bottom: 4px; }
+details.more { font-size: inherit; color: inherit; margin-top: 8px; }
+details.more > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 4px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::after { content: "▾"; color: var(--muted); grid-row: 1; grid-column: 3; transition: transform .15s; }
+details.more:not([open]) > summary::after { transform: rotate(-90deg); }
+details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
+.more-sub { grid-column: 1 / -1; grid-row: 2; font-size: 13px; color: var(--muted); }
+#moreBadge { grid-row: 1; grid-column: 2; }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
@@ -252,20 +264,23 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       <div class="now-acts" id="nowActs"></div>
       <div id="nowExtra"></div>
     </div>
-    <div class="nudge" id="nudgeBtns">
-      <button type="button" class="btn" id="tired">Tired: 15 min earlier</button>
-      <button type="button" class="btn" id="wired">Wired</button>
-    </div>
     <div id="otBox" hidden></div>
     <div class="nudge-state" id="nudgeState" hidden></div>
-    <div class="catchup" id="lateWrap" hidden>
-      <button type="button" class="linkbtn" id="lateToggle" aria-expanded="false">Running late? Start a catch-up routine</button>
-      <div class="nudge" id="lateBtns" style="margin-top:6px" hidden>
-        <button type="button" class="btn" id="lateDinner">Starting dinner now</button>
-        <button type="button" class="btn" id="lateBath">Starting bath now</button>
-      </div>
-    </div>
     <div class="nudge-state" id="catchState" hidden></div>
+    <details class="adjust" id="adjustFold">
+      <summary>Adjust tonight</summary>
+      <div class="nudge" id="nudgeBtns">
+        <button type="button" class="btn" id="tired">Tired: 15 min earlier</button>
+        <button type="button" class="btn" id="wired">Wired</button>
+      </div>
+      <div class="catchup" id="lateWrap" hidden>
+        <button type="button" class="linkbtn" id="lateToggle" aria-expanded="false">Running late? Start a catch-up routine</button>
+        <div class="nudge" id="lateBtns" style="margin-top:6px" hidden>
+          <button type="button" class="btn" id="lateDinner">Starting dinner now</button>
+          <button type="button" class="btn" id="lateBath">Starting bath now</button>
+        </div>
+      </div>
+    </details>
     <div id="countdown" hidden></div>
   </section>
 
@@ -391,6 +406,8 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     <p class="hint" id="savedLine"></p>
   </section>
 
+  <details class="more" id="moreFold">
+    <summary><span>More</span><span class="more-sub">Patterns, night wakings, history, sharing, settings</span><span class="badge" id="moreBadge" hidden></span></summary>
   <section class="card pat">
     <details class="fold" id="patFold"><summary><h2>Her patterns</h2><span class="badge" id="patBadge" hidden></span></summary>
     <div id="patBody"></div>
@@ -535,6 +552,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. Awake times, settle times and the early-waking signs are common advice from sleep consultants, not official guidelines. This is a guide only. Your child's own cues come first.</p>
     </details>
   </section>
+  </details>
 </div>
 
 <div class="setup" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="setupTitle">
@@ -1253,7 +1271,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       if (!state.trial && Math.abs(delta) >= 15) button(`Try usual bedtime ${fmt(anchor + delta)} for ${TRIAL_NIGHTS} nights`, () => startTrial("bedtime", delta));
     }
     const lateShown = !state.trial && renderLateness(body, para, button);
-    if (state.trial) { const due = shiftKey(state.trial.start, TRIAL_NIGHTS); setBadge("patBadge", day >= due ? "Check-in ready" : "Trial running", day >= due); if (day >= due) $("patFold").open = true; }
+    if (state.trial) { const due = shiftKey(state.trial.start, TRIAL_NIGHTS); setBadge("patBadge", day >= due ? "Check-in ready" : "Trial running", day >= due); if (day >= due) { $("patFold").open = true; $("moreFold").open = true; } }
     else setBadge("patBadge", (rec && rec.delta !== undefined) || lateShown ? "Suggestion" : "", true);
     { const r = recSleep(ageMonths()), t = totalSleep();
       if (t < r.lo || t > r.hi) para(`Her plan gives ${dur(t)} of sleep a day, ${t < r.lo ? "below" : "above"} the usual ${dur(r.lo)}–${dur(r.hi)} for her age. You can change it in Settings.`, "muted"); }
@@ -1486,7 +1504,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     if (NP) {
       const due = shiftKey(NP.start, NP.len), nn = Math.round((parseKey(day) - parseKey(NP.start)) / 86400000) + 1;
       setBadge("nightBadge", day >= due ? "Check-in ready" : nn < 1 ? "Plan starts tonight" : `Plan night ${nn} of ${NP.len}`, day >= due);
-      if (day >= due) $("nightFold").open = true;
+      if (day >= due) { $("nightFold").open = true; $("moreFold").open = true; }
       renderNightPlan(body, NP, yesterday); return;
     }
     const A = analyse(nightKeys(shiftKey(day, -14), yesterday));
@@ -1728,7 +1746,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
   }));
 
   // Folded sections remember whether they're open on this phone.
-  const FOLDS = ["patFold", "nightFold", "chartFold", "logFold", "backupFold"];
+  const FOLDS = ["moreFold", "patFold", "nightFold", "chartFold", "logFold", "backupFold"];
   (() => {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem("sleep.folds") || "{}") || {}; } catch (e) {}
@@ -1738,7 +1756,12 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       d.addEventListener("toggle", () => { saved[id] = d.open; try { localStorage.setItem("sleep.folds", JSON.stringify(saved)); } catch (e) {} });
     });
   })();
-  function setBadge(id, txt, hot) { const b = $(id); if (!b) return; b.textContent = txt || ""; b.hidden = !txt; b.className = "badge" + (hot ? " hot" : ""); }
+  function setBadge(id, txt, hot) {
+    const b = $(id); if (!b) return; b.textContent = txt || ""; b.hidden = !txt; b.className = "badge" + (hot ? " hot" : "");
+    // Anything new inside More shows on More itself.
+    const hotOnes = ["patBadge", "nightBadge"].map($).filter((x) => x && !x.hidden && x.classList.contains("hot"));
+    const mb = $("moreBadge"); mb.hidden = !hotOnes.length; mb.textContent = "New"; mb.className = "badge hot";
+  }
 
   // ---------- save buttons ----------
   // ---------- Today: the whole day as one list ----------
