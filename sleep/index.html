@@ -20,7 +20,7 @@
 <style>
 :root {
   --bg: #f5f3ef; --surface: #ffffff; --surface-2: #efece6; --text: #1e1c22; --muted: #6a6670; --border: #e1ddd5;
-  --accent: #4b5bb8; --accent-soft: #e6e9f8; --bath: #2f8a8a; --books: #b8456b; --screens: #8a8692; --dinner: #5f7f2a;
+  --accent: #4b5bb8; --accent-soft: #e6e9f8; --bath: #2f8a8a; --books: #b8456b; --screens: #8a8692; --dinner: #5f7f2a; --dress: #5b7aa8;
   --c-lights: #c27a1a; --c-asleep: #3a4a9e; --lights-ink: #9a5d0c; --sleep: #3a4a9e;
   --warn: #9a5a00; --warn-soft: #fbefd8; --good: #1f7a4d; --good-soft: #e3f3ea;
   --radius: 14px; color-scheme: light;
@@ -28,14 +28,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #131318; --surface: #1c1c23; --surface-2: #25252e; --text: #ecebf0; --muted: #a09fab; --border: #33333d;
-    --accent: #9aa7f0; --accent-soft: #232845; --bath: #6cc7c7; --books: #e88aa8; --screens: #8e8a98; --dinner: #a3c46a;
+    --accent: #9aa7f0; --accent-soft: #232845; --bath: #6cc7c7; --books: #e88aa8; --screens: #8e8a98; --dinner: #a3c46a; --dress: #8fb0e0;
     --c-lights: #c08427; --c-asleep: #7183e0; --lights-ink: #f0b45c; --sleep: #9aa7f0;
     --warn: #f0c25c; --warn-soft: #362a10; --good: #5cc48f; --good-soft: #15301f; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #131318; --surface: #1c1c23; --surface-2: #25252e; --text: #ecebf0; --muted: #a09fab; --border: #33333d;
-  --accent: #9aa7f0; --accent-soft: #232845; --bath: #6cc7c7; --books: #e88aa8; --screens: #8e8a98; --dinner: #a3c46a;
+  --accent: #9aa7f0; --accent-soft: #232845; --bath: #6cc7c7; --books: #e88aa8; --screens: #8e8a98; --dinner: #a3c46a; --dress: #8fb0e0;
   --c-lights: #c08427; --c-asleep: #7183e0; --lights-ink: #f0b45c; --sleep: #9aa7f0;
   --warn: #f0c25c; --warn-soft: #362a10; --good: #5cc48f; --good-soft: #15301f; color-scheme: dark;
 }
@@ -355,6 +355,9 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       <li class="step plan" id="stepBath" style="--c:var(--bath)">
         <div class="step-head"><span class="st"></span><span class="nm">Bath<span class="sub" id="dBath"></span></span><span class="tm" id="tBath">–</span><span class="chev"></span></div>
       </li>
+      <li class="step plan" id="stepDress" style="--c:var(--dress)">
+        <div class="step-head"><span class="st"></span><span class="nm">Dry &amp; pyjamas<span class="sub" id="dDress"></span></span><span class="tm" id="tDress">–</span><span class="chev"></span></div>
+      </li>
       <li class="step plan" id="stepBooks" style="--c:var(--books)">
         <div class="step-head"><span class="st"></span><span class="nm">Books<span class="sub" id="dBooks"></span></span><span class="tm" id="tBooks">–</span><span class="chev"></span></div>
       </li>
@@ -475,8 +478,11 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
         <div class="field"><label for="dinner">Dinner (min)</label><input type="number" id="dinner" min="0" max="90" step="5"></div>
         <div class="field"><label for="digest">Quiet time after dinner (min)</label><input type="number" id="digest" min="0" max="90" step="5"></div>
       </div>
-      <div class="row3">
+      <div class="row">
         <div class="field"><label for="bath">Bath (min)</label><input type="number" id="bath" min="0" max="90" step="5"></div>
+        <div class="field"><label for="dress">Dry &amp; pyjamas (min)</label><input type="number" id="dress" min="0" max="60" step="5"></div>
+      </div>
+      <div class="row">
         <div class="field"><label for="books">Books (min)</label><input type="number" id="books" min="0" max="90" step="5"></div>
         <div class="field"><label for="settle">Settle (min)</label><input type="number" id="settle" min="0" max="90" step="5"></div>
       </div>
@@ -510,8 +516,8 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       <p><strong>Ready to drop the nap?</strong> If she settles 15 minutes or more faster on no-nap days, the planner suggests trying quiet time instead. Long settling together with early waking or grumpy mornings usually means too much daytime sleep.</p>
       <p><strong>Night wakings.</strong> Tap "She's awake" when she wakes. A dim screen records the time and asks why she woke and what you did, then "She's back asleep" records how long she was awake. After 5 nights, the planner looks for the cause. It checks whether she mostly wants you (especially if one of you stays or she comes into your bed), wakes at the same time each night, has night terrors, needs the toilet, is scared, or wakes more after late nights. It then suggests a 10-night plan with a short script for the night screen, so whoever gets up responds the same way. Nights 2–4 are often worse before they get better. A star is earned for each night in her own bed. Frequent night terrors or regular snoring are flagged as worth raising with your GP.</p>
       <p><strong>Always running late?</strong> If lights out is 30+ minutes late on 6 of the last 10 nights, the planner checks the mornings after. If she slept in and was mostly happy, it suggests a later day as a 4-night trial: a later wake-up and bedtime, no later than your latest wake-up for daycare days. If she still woke at her usual time, a later schedule would cost her~ sleep, so it suggests ways to make the evening fit instead, including a shorter routine (quiet time and bath no shorter than 15 minutes, books no shorter than 20).</p>
-      <p><strong>The routine.</strong> It starts at dinner (screens off), then quiet time to digest, then bath, books and lights out. The planner works back from the asleep-by time to tell you when to start dinner.</p>
-      <p><strong>Catch-up routine.</strong> If you're late, tap "Starting dinner now" or "Starting bath now". Quiet time is cut down to 15 minutes, then dinner to 30, books to 15 and the bath to 10, keeping the same order, to get lights out as close to the plan as possible. If she's also wired after a good nap, each Wired tap still adds 15 minutes of books.</p>
+      <p><strong>The routine.</strong> It starts at dinner (screens off), then quiet time to digest, then bath, drying and pyjamas, books and lights out. The planner works back from the asleep-by time to tell you when to start dinner.</p>
+      <p><strong>Catch-up routine.</strong> If you're late, tap "Starting dinner now" or "Starting bath now". Quiet time is cut down to 15 minutes, then dinner to 30, books to 15, the bath to 10 and drying to 5, keeping the same order, to get lights out as close to the plan as possible. If she's also wired after a good nap, each Wired tap still adds 15 minutes of books.</p>
       <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. Awake times, settle times and the early-waking signs are common advice from sleep consultants, not official guidelines. This is a guide only. Your child's own cues come first.</p>
     </details>
   </section>
@@ -619,8 +625,8 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     if (!s || typeof s !== "object") s = {};
     // Existing phones keep the defaults they were set up with; new families get neutral ones and a setup screen.
     const defaults = fresh
-      ? { targetWake: "07:00", anchorBed: "20:00", bath: 20, books: 20, settle: 15, latestWake: "07:30", dinner: 30, digest: 15, stdNap: 60, birthMonth: "", pronoun: "she", childName: "" }
-      : { targetWake: "06:45", bath: 20, books: 30, settle: 30, latestWake: "07:15", dinner: 40, digest: 20, stdNap: 90, birthMonth: "", pronoun: "she", childName: "" };
+      ? { targetWake: "07:00", anchorBed: "20:00", bath: 20, dress: 10, books: 20, settle: 15, latestWake: "07:30", dinner: 30, digest: 15, stdNap: 60, birthMonth: "", pronoun: "she", childName: "" }
+      : { targetWake: "06:45", bath: 20, dress: 10, books: 30, settle: 30, latestWake: "07:15", dinner: 40, digest: 20, stdNap: 90, birthMonth: "", pronoun: "she", childName: "" };
     s.settings = Object.assign(defaults, s.settings || {});
     if (fresh) { s.migrated = true; s.settle30 = true; s.setupDone = false; }
     else if (s.setupDone === undefined) s.setupDone = true;
@@ -987,7 +993,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
 
   function syncInputs() {
     ["wake", "napStart", "napEnd", "actual", "lightsOut"].forEach((id) => { $(id).value = cur[id] || ""; });
-    ["targetWake", "anchorBed", "latestWake", "dinner", "digest", "bath", "books", "settle"].forEach((id) => { if (document.activeElement !== $(id)) $(id).value = S[id]; });
+    ["targetWake", "anchorBed", "latestWake", "dinner", "digest", "bath", "dress", "books", "settle"].forEach((id) => { if (document.activeElement !== $(id)) $(id).value = S[id]; });
     $("stdNap").value = stdNap(); $("birthMonth").value = S.birthMonth || ""; $("noNap").value = String(noNapEarlier());
     renderSleepSettings();
     $("nightAwake").value = cur.nightAwake || "";
@@ -1058,38 +1064,39 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     if (mode === "now") { $("wakeByTime").textContent = fmt(r.wakeBy); $("wakeByWhy").textContent = r.wakeByWhy; }
 
     const settle = +S.settle || 0, books = +S.books || 0, bath = +S.bath || 0, dinner = +S.dinner || 0, digest = +S.digest || 0;
-    const lights = asleep - settle, booksStart = lights - books, bathStart = booksStart - bath;
+    const dress = Number.isFinite(+S.dress) ? +S.dress : 10;
+    const lights = asleep - settle, booksStart = lights - books, dressStart = booksStart - dress, bathStart = dressStart - bath;
     const digestStart = bathStart - digest, dinnerStart = digestStart - dinner;
     cur.plannedLights = lights;
     if (persist) commit();
 
     // Catch-up: started late from dinner or from the bath. Trim quiet time (to 15), dinner (to 30),
-    // books (to 15), then bath (to 10), keeping the order.
-    let shown = { dinnerStart, digestStart, bathStart, booksStart, lights, asleep, dinnerD: dinner, digestD: digest, bathD: bath, booksD: books };
+    // books (to 15), bath (to 10), then drying and pyjamas (to 5), keeping the order.
+    let shown = { dinnerStart, digestStart, bathStart, dressStart, booksStart, lights, asleep, dinnerD: dinner, digestD: digest, bathD: bath, dressD: dress, booksD: books };
     const started = toMin(cur.startedAt), fromBath = cur.startedStep === "bath";
     const catchUp = started !== null && started > (fromBath ? bathStart : dinnerStart);
     if (catchUp) {
       // "Wired" (after a good nap) always adds its time on top as extra books, so being late doesn't swallow it.
       const wiredExtra = Math.max(0, nudge);
-      const d = { dinner: fromBath ? 0 : dinner, digest: fromBath ? 0 : digest, bath, books };
-      const mins = { digest: 15, dinner: 30, books: 15, bath: 10 };
-      const order = fromBath ? ["books", "bath"] : ["digest", "dinner", "books", "bath"];
+      const d = { dinner: fromBath ? 0 : dinner, digest: fromBath ? 0 : digest, bath, dress, books };
+      const mins = { digest: 15, dinner: 30, books: 15, bath: 10, dress: 5 };
+      const order = fromBath ? ["books", "bath", "dress"] : ["digest", "dinner", "books", "bath", "dress"];
       let short = order.reduce((t, k) => t + d[k], 0) - (lights - wiredExtra - started);
       for (const k of order) { if (short <= 0) break; const c = Math.min(short, Math.max(0, d[k] - mins[k])); d[k] -= c; short -= c; }
       d.books += wiredExtra;
       let t = started;
       const dS = fromBath ? dinnerStart : t; if (!fromBath) t += d.dinner;
       const qS = fromBath ? digestStart : t; if (!fromBath) t += d.digest;
-      const bS = t; t += d.bath; const kS = t; t += d.books;
-      shown = { dinnerStart: dS, digestStart: qS, bathStart: bS, booksStart: kS, lights: t, asleep: t + settle,
-        dinnerD: fromBath ? dinner : d.dinner, digestD: fromBath ? digest : d.digest, bathD: d.bath, booksD: d.books };
+      const bS = t; t += d.bath; const pS = t; t += d.dress; const kS = t; t += d.books;
+      shown = { dinnerStart: dS, digestStart: qS, bathStart: bS, dressStart: pS, booksStart: kS, lights: t, asleep: t + settle,
+        dinnerD: fromBath ? dinner : d.dinner, digestD: fromBath ? digest : d.digest, bathD: d.bath, dressD: d.dress, booksD: d.books };
     }
     plan = Object.assign({ origDinner: dinnerStart, origBath: bathStart, origLights: lights }, shown);
     $("catchState").hidden = !catchUp;
     if (catchUp) {
       const lateMin = shown.lights - lights;
       $("catchState").textContent = "";
-      $("catchState").append(`Catch-up from ${fmt(started)}: ` + (fromBath ? "" : `${shown.dinnerD} min dinner, ${shown.digestD} min quiet time, `) + `${shown.bathD} min bath, ${shown.booksD} min books` +
+      $("catchState").append(`Catch-up from ${fmt(started)}: ` + (fromBath ? "" : `${shown.dinnerD} min dinner, ${shown.digestD} min quiet time, `) + `${shown.bathD} min bath, ${shown.dressD} min drying, ${shown.booksD} min books` +
         (nudge > 0 ? ` (including ${nudge} extra because she's wired). ` : ". ") +
         (lateMin > 0 ? `Lights out ${dur(lateMin)} later than planned. ` : "Lights out still on time. "));
       const u = el("button", "linkbtn", "Undo");
@@ -1106,6 +1113,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     $("tDinner").textContent = fmt(shown.dinnerStart); $("dDinner").textContent = `${shown.dinnerD} min`;
     $("tDigest").textContent = fmt(shown.digestStart); $("dDigest").textContent = `${shown.digestD} min to digest, calm play`;
     $("tBath").textContent = fmt(shown.bathStart);   $("dBath").textContent = `${shown.bathD} min`;
+    $("tDress").textContent = fmt(shown.dressStart); $("dDress").textContent = `${shown.dressD} min`;
     $("tBooks").textContent = fmt(shown.booksStart); $("dBooks").textContent = `${shown.booksD} min`;
     $("tLights").textContent = fmt(shown.lights);    $("dSettle").textContent = `${settle} min to settle`;
     $("tSleep").textContent = fmt(shown.asleep);
@@ -1149,7 +1157,8 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       if (left > 6 * 60) { cd.hidden = true; return; }
       text = `Dinner in ${dur(left)}`; cls = left <= 15 ? "soon" : "";
     } else if (n < plan.digestStart) { text = `Dinner now. Quiet time at ${fmt(plan.digestStart)}`; cls = "now"; }
-    else if (n < plan.bathStart) { text = `Quiet time. Bath at ${fmt(plan.bathStart)}`; cls = "now"; } else if (n < plan.booksStart) { text = `Bath time now. Books at ${fmt(plan.booksStart)}`; cls = "now"; }
+    else if (n < plan.bathStart) { text = `Quiet time. Bath at ${fmt(plan.bathStart)}`; cls = "now"; } else if (n < plan.dressStart) { text = `Bath time now. Out at ${fmt(plan.dressStart)}`; cls = "now"; }
+    else if (n < plan.booksStart) { text = `Drying and pyjamas. Books at ${fmt(plan.booksStart)}`; cls = "now"; }
     else if (n < plan.lights) { text = `Books now. Lights out at ${fmt(plan.lights)}`; cls = "now"; }
     else if (n < plan.asleep) { text = `Lights out. Asleep by ${fmt(plan.asleep)}`; cls = "now"; }
     else if (n < plan.asleep + 180 && !cur.actual) { text = "Log lights out and when she fell asleep below"; }
@@ -1764,11 +1773,12 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     else if (cur.napSet && toMin(cur.napStart) !== null && toMin(cur.napEnd) !== null) set("stepNap", "done", `${fmtShort(toMin(cur.napStart))}–${fmtShort(toMin(cur.napEnd))}`, dur(toMin(cur.napEnd) - toMin(cur.napStart)));
     else set("stepNap", "todo", "–", "Not logged yet");
     // Routine
-    if (!plan) { ["stepDinner", "stepDigest", "stepBath", "stepBooks", "stepLights", "stepAsleep"].forEach((id) => set(id, "plan")); return; }
+    if (!plan) { ["stepDinner", "stepDigest", "stepBath", "stepDress", "stepBooks", "stepLights", "stepAsleep"].forEach((id) => set(id, "plan")); return; }
     const phase = (start, end) => (!isToday ? "plan" : n >= end ? "past" : n >= start ? "now" : "plan");
     set("stepDinner", phase(plan.dinnerStart, plan.digestStart));
     set("stepDigest", phase(plan.digestStart, plan.bathStart));
-    set("stepBath", phase(plan.bathStart, plan.booksStart));
+    set("stepBath", phase(plan.bathStart, plan.dressStart));
+    set("stepDress", phase(plan.dressStart, plan.booksStart));
     set("stepBooks", cur.lightsOut ? "past" : phase(plan.booksStart, plan.lights));
     const lo = eveMin(cur.lightsOut), as = eveMin(cur.actual);
     if (lo !== null) set("stepLights", "done", fmt(lo), `Plan ${fmt(plan.lights)}` + (cur.stall ? " · stalling" : ""));
@@ -1858,7 +1868,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       if (typeof d.birthMonth === "string" && /^\d{4}-\d{2}$/.test(d.birthMonth)) S.birthMonth = d.birthMonth;
       if ([15, 30, 45, 60, 90].includes(d.noNapEarlier)) S.noNapEarlier = d.noNapEarlier;
       if (typeof d.stdNap === "number" && d.stdNap >= 0 && d.stdNap <= 180) S.stdNap = d.stdNap;
-      ["dinner", "digest", "bath", "books", "settle"].forEach((f) => { if (typeof d[f] === "number" && d[f] >= 0 && d[f] <= 900) S[f] = d[f]; });
+      ["dinner", "digest", "bath", "dress", "books", "settle"].forEach((f) => { if (typeof d[f] === "number" && d[f] >= 0 && d[f] <= 900) S[f] = d[f]; });
       const tr = data.trial;
       if (tr && typeof tr === "object" && DATE.test(tr.start || "") && HHMM.test(tr.from || "") && HHMM.test(tr.origFrom || "") && ["earlier", "fade", "later", "bedtime"].includes(tr.kind) && (tr.fromWake === undefined || HHMM.test(tr.fromWake))
         && ["delta", "fromSettle", "fromShift", "origSettle", "origShift"].every((f) => typeof tr[f] === "number" && Math.abs(tr[f]) <= 600)) state.trial = tr;
@@ -1905,7 +1915,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
   $("noNap").addEventListener("change", () => { S.noNapEarlier = parseInt($("noNap").value, 10); save(); calc(!!state.log[day]); });
   $("birthMonth").addEventListener("change", () => { S.birthMonth = /^\d{4}-\d{2}$/.test($("birthMonth").value) ? $("birthMonth").value : ""; save(); renderSleepSettings(); });
   $("useRec").addEventListener("click", () => setTotal(recSleep(ageMonths()).mid));
-  ["dinner", "digest", "bath", "books", "settle"].forEach((id) => $(id).addEventListener("input", () => { const n = parseInt($(id).value, 10); if (Number.isFinite(n) && n >= 0) { S[id] = n; save(); calc(!!state.log[day]); } }));
+  ["dinner", "digest", "bath", "dress", "books", "settle"].forEach((id) => $(id).addEventListener("input", () => { const n = parseInt($(id).value, 10); if (Number.isFinite(n) && n >= 0) { S[id] = n; save(); calc(!!state.log[day]); } }));
   $("nwMinus").addEventListener("click", () => { cur.nightWakes = Math.max(0, (+cur.nightWakes || 0) - 1); if (!cur.nightWakes) cur.nightAwake = 0; calc(true); });
   $("nwPlus").addEventListener("click", () => { cur.nightWakes = Math.min(10, (+cur.nightWakes || 0) + 1); calc(true); });
   $("nightAwake").addEventListener("input", () => { const n = parseInt($("nightAwake").value, 10); cur.nightAwake = Number.isFinite(n) && n >= 0 ? Math.min(n, 300) : 0; calc(true); });
