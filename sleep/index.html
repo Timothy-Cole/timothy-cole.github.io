@@ -337,6 +337,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
               <div class="tin"><input type="time" id="napEnd"><button type="button" class="btn" data-now="napEnd">Now</button></div>
             </div>
           </div>
+          <div class="hint" id="napGuide"></div>
           <div class="wakeby" id="wakeBy" hidden>
             <div class="lbl">Wake her~ by</div>
             <div class="val" id="wakeByTime">–</div>
@@ -695,8 +696,9 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     else if (lateNap) why = raw > hi
       ? `Late nap, so held at the latest (${fmt(hi)}). She may take longer to settle.`
       : `Late nap, so later: she needs about 5 hours awake after it.`;
-    else if (napAdj === 0) why = "Normal nap, so her usual bedtime.";
-    else why = `${dur(napLen)} nap, so ${dur(Math.abs(napAdj))} ${napAdj < 0 ? "earlier" : "later"} than usual.`;
+    else if (e.napMode === "yes" && !e.napSet) why = `Assumes her usual ${dur(usual)} nap. Log today's nap to update.`;
+    else if (napAdj === 0) why = `${dur(napLen)} nap, about her usual, so her usual bedtime.`;
+    else why = `${dur(napLen)} nap, ${dur(Math.abs(napLen - usual))} ${napLen < usual ? "less" : "more"} than her usual ${dur(usual)}, so ${dur(Math.abs(napAdj))} ${napAdj < 0 ? "earlier" : "later"}.`;
     if (base < EARLIEST_BED) {
       base = EARLIEST_BED;
       notes.push("Moved to 6:00pm, the earliest bedtime this planner suggests. If she's falling apart, a little earlier is fine.");
@@ -1197,6 +1199,19 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       else para(`She settles about the same on nap and no-nap days (${signed(round5(diff))}), so the nap still seems to suit her~.`, "muted");
     }
 
+    {
+      const lens = Object.keys(state.log).sort().reverse().slice(0, 14).map((k) => state.log[k])
+        .filter((e) => e.napMode === "yes" && e.napSet && toMin(e.napStart) !== null && toMin(e.napEnd) > toMin(e.napStart))
+        .map((e) => toMin(e.napEnd) - toMin(e.napStart));
+      if (lens.length >= MIN_N && stdNap()) {
+        const typ = Math.round(median(lens) / 15) * 15;
+        if (Math.abs(typ - stdNap()) >= 20) {
+          const newBed = toMin(S.targetWake) - (totalSleep() - typ);
+          para(`Her naps have been about ${dur(typ)}, ${typ < stdNap() ? "shorter" : "longer"} than the ${dur(stdNap())} in Settings, so most nights land ${typ < stdNap() ? "earlier" : "later"} than her usual bedtime.`, "rec");
+          if (!state.trial) button(`Set usual nap to ${dur(typ)} (asleep by becomes ${fmt(newBed)})`, () => { const total = totalSleep(); S.stdNap = typ; setTotal(total); });
+        }
+      }
+    }
     if (p.happyTotals.length >= MIN_N) {
       const hv = Math.round(median(p.happyTotals) / 15) * 15;
       para(`Before happy mornings she'd had about ${dur(hv)} of sleep (night and nap).`);
@@ -1709,7 +1724,14 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
   });
   $("nightRow").addEventListener("click", openNight);
 
+  function napGuide() {
+    const a = toMin(S.anchorBed), u = stdNap(), k = u ? noNapEarlier() / u : 1 / 3;
+    if (!u) return "She's stopped napping, so a nap today moves bedtime a little later.";
+    const at = (len) => fmtShort(a + round5((len - u) * k));
+    return `Shorter nap: earlier bedtime. Longer or late nap: later. No nap ${fmtShort(a - noNapEarlier())} · 1h ${at(60)} · ${dur(u)} ${fmtShort(a)} · 2h ${at(120)}.`;
+  }
   function renderDay() {
+    $("napGuide").textContent = napGuide();
     const set = (id, st, time, sub) => {
       const li = $(id); li.dataset.st = st;
       if (time !== undefined) li.querySelector(".tm").textContent = time;
