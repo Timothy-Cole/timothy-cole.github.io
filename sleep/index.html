@@ -229,6 +229,7 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
 .nm-check { background: #140c08; border: 1px solid #c98a5a; border-radius: 12px; padding: 12px 14px; margin-top: 16px; }
 .nm-check p { margin: 0 0 10px; }
 .nm-check input { background: #000; color: #c98a5a; border-color: #3a2416; }
+#shareInBody p { font-size: 16px; margin: 0 0 12px; }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
@@ -427,7 +428,20 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
   </section>
 
   <section class="card">
-    <details class="fold" id="backupFold"><summary><h2>Backup</h2><span class="badge" id="backupBadge" hidden></span></summary>
+    <details class="fold" id="backupFold"><summary><h2>Backup &amp; sharing</h2><span class="badge" id="backupBadge" hidden></span></summary>
+    <h3 class="set-h" style="margin-top:0">Another phone (e.g. grandparents)</h3>
+    <div class="row">
+      <button type="button" class="btn" id="sendSetup">Set up another phone</button>
+      <button type="button" class="btn" id="sendNights">Send recent nights</button>
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label for="pasteLink">Got a link? Paste it here</label>
+      <div class="tin"><input type="text" id="pasteLink" placeholder="https://…#share=…" autocomplete="off"><button type="button" class="btn" id="pasteAdd">Add</button></div>
+    </div>
+    <input type="text" id="shareOut" readonly hidden>
+    <p class="hint" id="shareMsg" aria-live="polite"></p>
+    <div class="hint">"Set up another phone" sends a link that copies this routine onto their phone. "Send recent nights" sends the last week's log back. Links go through your own messages. Nothing is stored online.</div>
+    <h3 class="set-h">Backup file</h3>
     <div class="row">
       <button type="button" class="btn" id="exportBtn">Export</button>
       <button type="button" class="btn" id="importBtn">Import</button>
@@ -544,6 +558,14 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     <p class="hint" id="suPreview"></p>
     <button type="button" class="btn primary lg" id="suStart">Start</button>
     <button type="button" class="linkbtn" id="suSkip" style="display:block;margin:14px auto 0">Skip for now</button>
+  </div>
+</div>
+
+<div class="setup" id="shareIn" hidden role="dialog" aria-modal="true" aria-labelledby="shareInTitle" style="z-index:70">
+  <div class="setup-inner">
+    <h2 id="shareInTitle"></h2>
+    <div id="shareInBody"></div>
+    <div class="now-acts" id="shareInActs" style="margin-top:16px"></div>
   </div>
 </div>
 
@@ -1607,6 +1629,8 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     const wakeDone = !!cur.wakeSet || !!cur.mood || (!!state.log[day] && toMin(cur.wake) !== null && cur.wake !== S.targetWake);
     const napDone = !!cur.napSet || cur.napMode === "no";
     const morning = h >= 4 && h < 12 && activeDay() === day;
+    // Phones set up from a link (e.g. grandparents) get a one-tap way to send their nights back.
+    if (state.helper && (morning || cur.actual)) { const b = el("button", "btn", "Send nights to the other phone"); b.type = "button"; b.style.marginTop = "10px"; b.onclick = () => sendLink("nights"); extra.appendChild(b); }
     const NPs = state.nightPlan;
     const stirHint = NPs && NPs.stir != null && NPs.start <= nightKeyNow() ? ` Night plan: stir her~ at about ${fmt(NPs.stir)}.` : "";
 
@@ -1797,6 +1821,122 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     $("savedLine").textContent = saved ? `Saved ${fmt(toMin(cur.savedAt))}` : "Saves as you tap";
   }
 
+  // ---------- share links: set up another phone, or send nights back ----------
+  // Everything travels inside the link (after the #), so nothing is stored online.
+  const pageUrl = () => location.href.split("#")[0];
+  const toB64u = (bytes) => { let s = ""; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+  const fromB64u = (str) => { const b = atob(str.replace(/-/g, "+").replace(/_/g, "/")); const out = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) out[i] = b.charCodeAt(i); return out; };
+  async function packLink(obj) {
+    const raw = new TextEncoder().encode(JSON.stringify(obj));
+    if (window.CompressionStream) {
+      const z = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());
+      return `${pageUrl()}#share=z1.${toB64u(z)}`;
+    }
+    return `${pageUrl()}#share=j1.${toB64u(raw)}`;
+  }
+  async function unpackLink(link) {
+    const m = /#share=(z1|j1)\.([A-Za-z0-9_-]+)/.exec(link || ""); if (!m) return null;
+    let bytes = fromB64u(m[2]);
+    if (m[1] === "z1") {
+      if (!window.DecompressionStream) throw new Error("This phone's browser is too old to open this link. Update iOS, or use Backup instead.");
+      bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+    }
+    const data = JSON.parse(new TextDecoder().decode(bytes));
+    if (!data || data.app !== "bedtime-planner" || !["setup", "nights"].includes(data.kind)) throw new Error("That isn't a bedtime planner link.");
+    return data;
+  }
+  const childWord = () => nameNow() || "your child";
+  async function sendLink(kind) {
+    const msg = $("shareMsg");
+    try {
+      let obj, text;
+      if (kind === "setup") {
+        obj = { app: "bedtime-planner", kind: "setup", v: 1, settings: Object.assign({}, S), nightPlan: state.nightPlan || null };
+        text = `Bedtime planner for ${childWord()}, set up with the same routine. Tap to open it:`;
+      } else {
+        const keys = nightKeys(shiftKey(day, -7), day).filter((k) => state.log[k]);
+        const log = {}; keys.forEach((k) => { log[k] = state.log[k]; });
+        const wakes = state.wakes.filter((w) => keys.includes(w.night) || w.night === shiftKey(keys[0] || day, -1));
+        if (!keys.length && !wakes.length) { msg.textContent = "Nothing logged in the last week to send."; return; }
+        obj = { app: "bedtime-planner", kind: "nights", v: 1, log, wakes };
+        text = `${childWord()[0].toUpperCase() + childWord().slice(1)}'s nights (${!keys.length ? "night wakings" : keys.length === 1 ? dayLabel(keys[0]) : `${dayLabel(keys[0])} to ${dayLabel(keys[keys.length - 1])}`}). Tap to add them:`;
+      }
+      const url = await packLink(obj);
+      if (navigator.share) {
+        try { await navigator.share({ title: "Bedtime planner", text, url }); msg.textContent = "Sent."; return; }
+        catch (e) { if (e && e.name === "AbortError") { msg.textContent = ""; return; } }
+      }
+      try { await navigator.clipboard.writeText(`${text} ${url}`); msg.textContent = "Link copied. Paste it into a message."; }
+      catch (e) { $("shareOut").value = url; $("shareOut").hidden = false; $("shareOut").select(); msg.textContent = "Copy this link and send it:"; }
+    } catch (e) { msg.textContent = "Couldn't make the link: " + e.message; }
+  }
+
+  // Receiving: from a tapped link (#share=… in the address) or a link pasted into Backup & sharing.
+  const isIOSBrowserTab = () => navigator.standalone === false;
+  function closeShareIn() { $("shareIn").hidden = true; document.body.style.overflow = ""; if (/#share=/.test(location.hash)) history.replaceState(null, "", pageUrl()); }
+  function showShareIn(data, link) {
+    const box = $("shareIn"), body = $("shareInBody"), acts = $("shareInActs");
+    body.innerHTML = ""; acts.innerHTML = "";
+    const p = (t, c) => body.appendChild(el("p", c || null, t));
+    const btn = (t, fn, primary) => { const b = el("button", "btn" + (primary ? " primary lg" : ""), t); b.type = "button"; b.onclick = fn; acts.appendChild(b); return b; };
+    if (data.kind === "setup") {
+      const d = data.settings || {}, who = (typeof d.childName === "string" && d.childName.trim()) || "your child";
+      $("shareInTitle").textContent = `Set up for ${who}`;
+      p(`Asleep by ${HHMM.test(d.anchorBed || "") ? fmt(toMin(d.anchorBed)) : "–"}, wake-up ${HHMM.test(d.targetWake || "") ? fmt(toMin(d.targetWake)) : "–"}, usual nap ${Number.isFinite(+d.stdNap) ? dur(+d.stdNap) : "–"}. The routine, settle time and wording come too.`);
+      if (Object.keys(state.log).length) p("This replaces the settings on this phone. Nights already logged here stay.", "hint");
+      btn("Use these settings", () => { applySettings(data); state.setupDone = true; state.helper = true; save(); closeShareIn(); location.reload(); }, true);
+    } else {
+      const keys = Object.keys(data.log || {}).filter((k) => DATE.test(k)).sort();
+      const nW = Array.isArray(data.wakes) ? data.wakes.length : 0;
+      $("shareInTitle").textContent = "Add nights from another phone";
+      p(keys.length ? `${keys.length} ${keys.length === 1 ? "day" : "days"}: ${dayLabel(keys[0])}${keys.length > 1 ? ` to ${dayLabel(keys[keys.length - 1])}` : ""}${nW ? `, plus ${nW} night ${nW === 1 ? "waking" : "wakings"}` : ""}.` : `${nW} night ${nW === 1 ? "waking" : "wakings"}.`);
+      p("Anything they logged (wake-up, nap, lights out, asleep, wakings) is added. Where both phones logged the same thing, theirs is used.", "hint");
+      if (isIOSBrowserTab()) p("Using the Bedtime app on your home screen? It keeps its own log, so copy this link, open the app, and paste it under Backup & sharing.", "hint");
+      btn("Add to this phone", () => { const r = mergeNights(data); closeShareIn(); $("backupMsg").textContent = r; }, true);
+      if (link && isIOSBrowserTab()) { const cb = btn("Copy link for the app", async () => { try { await navigator.clipboard.writeText(link); cb.textContent = "Copied. Now open the Bedtime app"; } catch (e) { cb.textContent = "Couldn't copy. Long-press the link in Messages instead"; } }); }
+    }
+    btn("Not now", closeShareIn);
+    box.hidden = false; document.body.style.overflow = "hidden";
+  }
+  async function receive(link) {
+    try { const data = await unpackLink(link); if (data) showShareIn(data, link); return !!data; }
+    catch (e) {
+      const known = e && /too old|isn't a bedtime/.test(e.message);
+      $("shareInTitle").textContent = "Couldn't open that link"; $("shareInBody").innerHTML = ""; $("shareInBody").appendChild(el("p", null, known ? e.message : "It may have been cut off when it was copied. Ask for it to be sent again.")); $("shareInActs").innerHTML = ""; const b = el("button", "btn", "Close"); b.onclick = closeShareIn; $("shareInActs").appendChild(b); $("shareIn").hidden = false; return true; }
+  }
+  // Merge nights from a share link: what the other phone logged wins.
+  function mergeNights(data) {
+    let days = 0;
+    Object.keys(data.log || {}).forEach((k) => {
+      if (!DATE.test(k)) return;
+      const inc = cleanEntry(data.log[k]); if (!inc) return;
+      const mine = state.log[k] = Object.assign({}, state.log[k] || {});
+      const before = JSON.stringify(mine);
+      if (inc.wakeSet && inc.wake) { mine.wake = inc.wake; mine.wakeSet = true; }
+      if (inc.napSet || inc.napMode === "no") ["napMode", "napStart", "napEnd", "napSet"].forEach((f) => { if (inc[f] !== undefined) mine[f] = inc[f]; });
+      ["mood", "lightsOut", "actual", "startedAt"].forEach((f) => { if (inc[f]) mine[f] = inc[f]; });
+      ["stall", "off", "snore"].forEach((f) => { if (inc[f]) mine[f] = true; });
+      ["nightWakes", "nightAwake"].forEach((f) => { if (+inc[f] > 0) mine[f] = inc[f]; });
+      if (inc.lightsOut || inc.actual) ["base", "planned", "plannedLights", "nudge"].forEach((f) => { if (typeof inc[f] === "number") mine[f] = inc[f]; });
+      if (JSON.stringify(mine) !== before) days++;
+    });
+    const w = addWakes(data.wakes);
+    save();
+    if (state.log[day]) cur = Object.assign({}, state.log[day]);
+    syncInputs(); calc(false);
+    return `Added from the other phone: ${days} ${days === 1 ? "day" : "days"}${w ? `, ${w} night ${w === 1 ? "waking" : "wakings"}` : ""}.`;
+  }
+  $("sendSetup").addEventListener("click", () => sendLink("setup"));
+  $("sendNights").addEventListener("click", () => sendLink("nights"));
+  $("pasteAdd").addEventListener("click", async () => {
+    let v = $("pasteLink").value.trim();
+    if (!v && navigator.clipboard && navigator.clipboard.readText) { try { v = (await navigator.clipboard.readText()).trim(); } catch (e) {} }
+    const m = /https?:\/\/\S*#share=\S+|#share=\S+/.exec(v);
+    if (!m) { $("shareMsg").textContent = "Paste the whole link that was sent to you."; return; }
+    $("pasteLink").value = "";
+    receive(m[0]);
+  });
+
   // ---------- backup ----------
   const HHMM = /^\d{2}:\d{2}$/, DATE = /^\d{4}-\d{2}-\d{2}$/;
   const STR_FIELDS = ["wake", "napStart", "napEnd", "actual", "lightsOut", "startedAt", "savedAt"];
@@ -1836,6 +1976,36 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
     }
     state.lastExport = Date.now(); save(); backupLine();
   }
+  // Settings from a backup or a setup link, checked field by field.
+  function applySettings(data) {
+    const d = data.settings || {};
+    ["targetWake", "anchorBed", "latestWake"].forEach((f) => { if (typeof d[f] === "string" && HHMM.test(d[f])) S[f] = d[f]; });
+    if (typeof d.childName === "string") S.childName = d.childName.slice(0, 30);
+    if (["she", "he", "they"].includes(d.pronoun)) S.pronoun = d.pronoun;
+    if (typeof d.birthMonth === "string" && /^\d{4}-\d{2}$/.test(d.birthMonth)) S.birthMonth = d.birthMonth;
+    if ([15, 30, 45, 60, 90].includes(d.noNapEarlier)) S.noNapEarlier = d.noNapEarlier;
+    if (typeof d.stdNap === "number" && d.stdNap >= 0 && d.stdNap <= 180) S.stdNap = d.stdNap;
+    ["dinner", "digest", "bath", "dress", "books", "settle"].forEach((f) => { if (typeof d[f] === "number" && d[f] >= 0 && d[f] <= 900) S[f] = d[f]; });
+    const tr = data.trial;
+    if (tr && typeof tr === "object" && DATE.test(tr.start || "") && HHMM.test(tr.from || "") && HHMM.test(tr.origFrom || "") && ["earlier", "fade", "later", "bedtime"].includes(tr.kind) && (tr.fromWake === undefined || HHMM.test(tr.fromWake))
+      && ["delta", "fromSettle", "fromShift", "origSettle", "origShift"].every((f) => typeof tr[f] === "number" && Math.abs(tr[f]) <= 600)) state.trial = tr;
+    if (typeof data.lastChange === "string" && DATE.test(data.lastChange)) state.lastChange = data.lastChange;
+    const np = data.nightPlan;
+    if (np && typeof np === "object" && PLAN_TITLE[np.kind] && DATE.test(np.start || "") && Number.isInteger(np.len) && np.len > 0 && np.len <= 60 && (np.stir === null || Number.isFinite(np.stir)))
+      state.nightPlan = { kind: np.kind, start: np.start, len: np.len, stir: np.stir };
+  }
+  function addWakes(list) {
+    let n = 0;
+    if (Array.isArray(list)) list.forEach((w) => {
+      if (!w || typeof w.id !== "string" || w.id.length > 20 || !DATE.test(w.night || "") || !HHMM.test(w.t || "")) return;
+      const clean = { id: w.id, night: w.night, t: w.t, back: HHMM.test(w.back || "") ? w.back : "",
+        cause: CAUSES.some(([v]) => v === w.cause) ? w.cause : "", resp: RESPS.some(([v]) => v === w.resp) ? w.resp : "" };
+      const i = state.wakes.findIndex((x) => x.id === w.id);
+      if (i >= 0) { if (JSON.stringify(state.wakes[i]) !== JSON.stringify(clean)) { state.wakes[i] = clean; n++; } }
+      else { state.wakes.push(clean); n++; }
+    });
+    return n;
+  }
   function importBackup(text) {
     let data;
     try { data = JSON.parse(text); } catch (e) { $("backupMsg").textContent = "That file isn't a bedtime planner backup."; return; }
@@ -1851,32 +2021,10 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
       Object.keys(inc).forEach((f) => { if ((mine[f] === undefined || mine[f] === "") && inc[f] !== "") { mine[f] = inc[f]; changed = true; } });
       if (changed) filled++;
     });
-    let wakesAdded = 0;
-    if (Array.isArray(data.wakes)) data.wakes.forEach((w) => {
-      if (!w || typeof w.id !== "string" || w.id.length > 20 || !DATE.test(w.night || "") || !HHMM.test(w.t || "")) return;
-      if (state.wakes.some((x) => x.id === w.id)) return;
-      state.wakes.push({ id: w.id, night: w.night, t: w.t, back: HHMM.test(w.back || "") ? w.back : "",
-        cause: CAUSES.some(([v]) => v === w.cause) ? w.cause : "", resp: RESPS.some(([v]) => v === w.resp) ? w.resp : "" });
-      wakesAdded++;
-    });
+    const wakesAdded = addWakes(data.wakes);
     let settingsMsg = "";
     if (wasEmpty && data.settings && typeof data.settings === "object") {
-      const d = data.settings;
-      ["targetWake", "anchorBed", "latestWake"].forEach((f) => { if (typeof d[f] === "string" && HHMM.test(d[f])) S[f] = d[f]; });
-      if (typeof d.childName === "string") S.childName = d.childName.slice(0, 30);
-      if (["she", "he", "they"].includes(d.pronoun)) S.pronoun = d.pronoun;
-      state.setupDone = true;
-      if (typeof d.birthMonth === "string" && /^\d{4}-\d{2}$/.test(d.birthMonth)) S.birthMonth = d.birthMonth;
-      if ([15, 30, 45, 60, 90].includes(d.noNapEarlier)) S.noNapEarlier = d.noNapEarlier;
-      if (typeof d.stdNap === "number" && d.stdNap >= 0 && d.stdNap <= 180) S.stdNap = d.stdNap;
-      ["dinner", "digest", "bath", "dress", "books", "settle"].forEach((f) => { if (typeof d[f] === "number" && d[f] >= 0 && d[f] <= 900) S[f] = d[f]; });
-      const tr = data.trial;
-      if (tr && typeof tr === "object" && DATE.test(tr.start || "") && HHMM.test(tr.from || "") && HHMM.test(tr.origFrom || "") && ["earlier", "fade", "later", "bedtime"].includes(tr.kind) && (tr.fromWake === undefined || HHMM.test(tr.fromWake))
-        && ["delta", "fromSettle", "fromShift", "origSettle", "origShift"].every((f) => typeof tr[f] === "number" && Math.abs(tr[f]) <= 600)) state.trial = tr;
-      if (typeof data.lastChange === "string" && DATE.test(data.lastChange)) state.lastChange = data.lastChange;
-      const np = data.nightPlan;
-      if (np && typeof np === "object" && PLAN_TITLE[np.kind] && DATE.test(np.start || "") && Number.isInteger(np.len) && np.len > 0 && np.len <= 60 && (np.stir === null || Number.isFinite(np.stir)))
-        state.nightPlan = { kind: np.kind, start: np.start, len: np.len, stir: np.stir };
+      applySettings(data); state.setupDone = true;
       settingsMsg = " Settings were copied too.";
     }
     save();
@@ -2002,6 +2150,8 @@ input[type="text"] { font: inherit; font-size: 18px; width: 100%; padding: 10px 
 
   syncInputs();
   calc(false);
+  if (/#share=/.test(location.hash)) receive(location.href);
+  window.addEventListener("hashchange", () => { if (/#share=/.test(location.hash)) receive(location.href); });
   backupLine();
 })();
 </script>
