@@ -530,8 +530,9 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
         <li><strong>No nap:</strong> earlier by the amount in Settings, 30 minutes to start with (unless she's stopped napping). The usual advice is 30–60 minutes earlier, because toddlers don't make up a missed nap minute for minute.</li>
         <li><strong>Shorter or longer nap:</strong> moves bedtime in proportion. With a 1h 30m usual nap and 30 minutes for no nap, a 1-hour nap is 10 minutes earlier and a 2-hour nap is 10 minutes later.</li>
         <li><strong>Late nap:</strong> she needs about 5 hours awake after a nap, so a late nap pushes bedtime later.</li>
+        <li><strong>Early start or early nap:</strong> to avoid overtiredness, she isn't kept up more than about 6h 30m after her nap, or about 12h 30m in the whole day (at age 3; a bit less at 2 and a bit more from 4). It never plans more than 13 hours of sleep a day in total. So waking at 5:30am, or a nap that ends early, brings bedtime earlier.</li>
       </ul>
-      <p>It always stays within 30 minutes of the setting, and never before 6:00pm. Tired and Wired can move one night by up to 45 minutes.</p>
+      <p>It stays within 30 minutes of the setting on normal days. On hard days (an early start or an early nap) it can go up to 90 minutes earlier, but never before 6:30pm. Tired and Wired can move one night by up to 45 minutes.</p>
       <p><strong>Wake her~ by</strong> is the earlier of her usual nap length and 5 hours before her usual bedtime.</p>
       <p><strong>Wired.</strong> A toddler who's wired at bedtime is often overtired, not undertired. After no nap, a nap under 45 minutes, or more than 5h 30m awake, the planner suggests keeping bedtime and calming things down instead of moving it later. After a decent nap, Wired moves bedtime 15 minutes later.</p>
       <p><strong>How far it moves.</strong> Tonight's bedtime never moves more than 45 minutes from her usual bedtime, whatever the naps and Tired or Wired taps add up to.</p>
@@ -620,7 +621,9 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
   const EARLY_WAKE = 6 * 60;       // waking before 6:00am counts as early; 6-7am is normal at 3
   const stdNap = () => (Number.isFinite(+S.stdNap) ? +S.stdNap : 90);   // her usual nap; asleep-by is for a day with this nap
   const noNapEarlier = () => (Number.isFinite(+S.noNapEarlier) ? +S.noNapEarlier : 30);   // no nap: this much earlier than usual
-  const MAX_SWING = 45;            // tonight never moves more than this from her usual bedtime
+  const MAX_SWING = 45;
+  const EARLY_FLOOR = 18 * 60 + 30;   // never plan asleep before 6:30pm
+  const EARLY_ROOM = 90;              // hard days can go up to 90 min before her usual bedtime            // tonight never moves more than this from her usual bedtime
   const TRIAL_NIGHTS = 4;          // nights a change runs before the check-in
   const LONG_SETTLE = 30, FAST_SETTLE = 10;
   const OT_NAP = 45, OT_AWAKE = 330; // overtired signs
@@ -734,8 +737,25 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     const byNap = anchor + napAdj;
     const byWindow = napStart !== null ? napEnd + WAKE_WINDOW : -Infinity;   // late naps
     const lateNap = round5(byWindow) > byNap;
-    const raw = round5(Math.max(byNap, byWindow));
-    const lo = anchor - Math.max(ANCHOR_FLEX, noNapEarlier()), hi = anchor + ANCHOR_FLEX;
+    let raw = round5(Math.max(byNap, byWindow));
+    // Overtiredness limits: no more than about 6h 30m awake after the nap, or 12h 30m awake in the day (at 3).
+    const lim = awakeLimits();
+    const capAfter = napStart !== null ? napEnd + lim.afterNap : Infinity;
+    const capDay = wake + napLen + lim.day;
+    const cap = Math.floor(Math.min(capAfter, capDay) / 5) * 5;
+    let capped = null;
+    if (cap < raw) {
+      raw = Math.max(cap, napStart !== null ? napEnd + 270 : -Infinity);   // never under 4h 30m awake after a nap
+      capped = capDay <= capAfter ? "day" : "nap";
+    }
+    const lo = Math.max(EARLY_FLOOR, anchor - Math.max(EARLY_ROOM, noNapEarlier())), hi = anchor + ANCHOR_FLEX;
+    // Don't plan more than the top of the recommended range (13h a day at 3), nap included.
+    if (capped) raw = Math.max(raw, round5(tW - (lim.maxSleep - napLen)));
+    // A nap never makes bedtime earlier than the same day with no nap at all.
+    if (napStart !== null) {
+      const noNapBed = Math.min(anchor - (usual ? noNapEarlier() : 0), Math.floor((wake + lim.day) / 5) * 5);
+      if (raw < noNapBed) { raw = noNapBed; capped = capped && "floor"; }
+    }
     let base = Math.min(hi, Math.max(lo, raw));
 
     let why;
@@ -746,6 +766,10 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     else if (e.napMode === "yes" && !e.napSet) why = `Assumes her usual ${dur(usual)} nap. Log today's nap to update.`;
     else if (napAdj === 0) why = `${dur(napLen)} nap, about her usual, so her usual bedtime.`;
     else why = `${dur(napLen)} nap, ${dur(Math.abs(napLen - usual))} ${napLen < usual ? "less" : "more"} than her usual ${dur(usual)}, so ${dur(Math.abs(napAdj))} ${napAdj < 0 ? "earlier" : "later"}.`;
+    if (capped === "floor") why = `Nap ended early (${fmt(napEnd)}), so earlier, the same as a day with no nap.`;
+    else if (capped === "day") why = `Up since ${fmt(wake)}${napStart === null ? " with no nap" : ""}, so earlier: about ${dur(lim.day)} awake in a day is plenty.`;
+    else if (capped === "nap") why = `Nap ended early (${fmt(napEnd)}), so earlier: about ${dur(lim.afterNap)} awake after a nap is plenty.`;
+    if (capped && base === lo && raw < lo) why += ` ${fmt(lo)} is the earliest it goes.`;
     if (base < EARLIEST_BED) {
       base = EARLIEST_BED;
       notes.push("Moved to 6:00pm, the earliest bedtime this planner suggests. If she's falling apart, a little earlier is fine.");
@@ -997,6 +1021,12 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
   const ageMonths = () => ageFrom(S.birthMonth);
   // Ranges from the American Academy of Sleep Medicine (per 24h, naps included); the middle figure
   // follows NHS-style guidance by year (about 12h at 3, a little less each year after).
+  // Sleep-coach limits on time awake: after the nap (upper end of coach ranges: 6h at 2, 6h 30m at 3, 7h from 4)
+  // and across the day (24h minus her recommended sleep, plus 30 min of leeway: 12h 30m at 3).
+  function awakeLimits() {
+    const m = ageMonths(), r = recSleep(m), age = m === null ? 36 : m;
+    return { afterNap: age < 36 ? 360 : age < 48 ? 390 : 420, day: 1440 - r.mid + 30, maxSleep: r.hi };
+  }
   function recSleep(months) {
     const m = months === null ? 36 : months;
     if (m < 12) return { mid: 840, lo: 720, hi: 960, band: "4–12 months" };
@@ -1090,7 +1120,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
 
     const p = patterns();
     const anchor = toMin(S.anchorBed);
-    const lo45 = anchor - Math.max(MAX_SWING, noNapEarlier() + 15), hi45 = anchor + MAX_SWING;
+    const lo45 = Math.min(r.base, anchor - Math.max(MAX_SWING, noNapEarlier() + 15)), hi45 = Math.max(r.base, anchor + MAX_SWING);
     const want = r.base + (cur.nudge || 0);
     const asleep = Math.min(hi45, Math.max(lo45, want));
     // keep the nudge to what actually applies, so taps past the limit don't pile up
