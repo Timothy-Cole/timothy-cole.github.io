@@ -707,8 +707,11 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     const anchor = toMin(S.anchorBed);   // asleep-by time on a day with her usual nap
     const notes = [];
     let napLen = 0, napStart = null, napEnd = null, wakeBy = null, wakeByWhy = "";
+    // Until today's nap is logged, plan for her usual nap. The nap boxes are only pre-filled from a past
+    // day for convenience, so their times (e.g. yesterday's late nap) mustn't affect today's plan.
+    const assumed = e.napMode === "yes" && !e.napSet;
 
-    if (e.napMode !== "no") {
+    if (e.napMode !== "no" && !assumed) {
       napStart = toMin(e.napStart);
       if (napStart === null) return { error: "Enter when the nap started." };
       if (napStart <= wake) return { error: "The nap start needs to be after wake-up." };
@@ -731,9 +734,10 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     // Nap length moves bedtime from her usual time: no nap moves it by the no-nap setting, and
     // of nap more or less than her usual nap moves it 1 minute. Once she's stopped napping, no nap is normal.
     const usual = stdNap();
+    if (assumed) napLen = usual;
     // Scale: missing her whole usual nap moves bedtime by the no-nap amount; part of a nap moves it in proportion.
     const k = usual ? noNapEarlier() / usual : 1 / 3;
-    const napAdj = napStart === null ? (usual ? -noNapEarlier() : 0) : round5((napLen - usual) * k);
+    const napAdj = assumed ? 0 : napStart === null ? (usual ? -noNapEarlier() : 0) : round5((napLen - usual) * k);
     const byNap = anchor + napAdj;
     const byWindow = napStart !== null ? napEnd + WAKE_WINDOW : -Infinity;   // late naps
     const lateNap = round5(byWindow) > byNap;
@@ -759,15 +763,15 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     let base = Math.min(hi, Math.max(lo, raw));
 
     let why;
-    if (napStart === null) why = usual ? `No nap, so ${noNapEarlier()} min earlier than usual.` : "Her usual bedtime.";
+    if (assumed) why = `Assumes her usual ${dur(usual)} nap. Log today's nap to update.`;
+    else if (napStart === null) why = usual ? `No nap, so ${noNapEarlier()} min earlier than usual.` : "Her usual bedtime.";
     else if (lateNap) why = raw > hi
       ? `Late nap, so held at the latest (${fmt(hi)}). She may take longer to settle.`
       : `Late nap, so later: she needs about 5 hours awake after it.`;
-    else if (e.napMode === "yes" && !e.napSet) why = `Assumes her usual ${dur(usual)} nap. Log today's nap to update.`;
     else if (napAdj === 0) why = `${dur(napLen)} nap, about her usual, so her usual bedtime.`;
     else why = `${dur(napLen)} nap, ${dur(Math.abs(napLen - usual))} ${napLen < usual ? "less" : "more"} than her usual ${dur(usual)}, so ${dur(Math.abs(napAdj))} ${napAdj < 0 ? "earlier" : "later"}.`;
     if (capped === "floor") why = `Nap ended early (${fmt(napEnd)}), so earlier, the same as a day with no nap.`;
-    else if (capped === "day") why = `Up since ${fmt(wake)}${napStart === null ? " with no nap" : ""}, so earlier: about ${dur(lim.day)} awake in a day is plenty.`;
+    else if (capped === "day") why = `Up since ${fmt(wake)}${napStart === null && !assumed ? " with no nap" : ""}, so earlier: about ${dur(lim.day)} awake in a day is plenty.`;
     else if (capped === "nap") why = `Nap ended early (${fmt(napEnd)}), so earlier: about ${dur(lim.afterNap)} awake after a nap is plenty.`;
     if (capped && base === lo && raw < lo) why += ` ${fmt(lo)} is the earliest it goes.`;
     if (base < EARLIEST_BED) {
@@ -776,7 +780,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     }
     if (e.napMode === "yes" && usual && napLen > usual + 15) notes.push(`The nap was ${dur(napLen)}, longer than her usual ${dur(usual)}.`);
     if (e.napMode === "yes" && napEnd > LATE_NAP_END) notes.push("The nap ended after 3:30pm. Late naps push bedtime back more than long ones, so try to have her~ up by about 3pm.");
-    return { base, why, notes, napLen, napped: napStart !== null, tW, wakeBy, wakeByWhy };
+    return { base, why, notes, napLen, napped: napStart !== null || assumed, tW, wakeBy, wakeByWhy };
   }
 
   // Wired at bedtime is usually overtired after a short or missing nap or a long stretch awake.
