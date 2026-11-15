@@ -242,6 +242,9 @@ details.more:not([open]) > summary::after { transform: rotate(-90deg); }
 details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
 .more-sub { grid-column: 1 / -1; grid-row: 2; font-size: 13px; color: var(--muted); }
 #moreBadge { grid-row: 1; grid-column: 2; }
+.log .act select { font-size: 15px; padding: 6px 8px; }
+.nap-times { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; align-items: center; }
+.nap-times input { font-size: 15px; padding: 6px 8px; }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
@@ -1398,7 +1401,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
       const parts = [];
       if (e.wake) parts.push("Woke " + fmt(toMin(e.wake)) + (e.mood ? `, ${e.mood}` : ""));
       if (e.napMode === "no") parts.push("No nap");
-      else if (e.napStart && e.napEnd && e.napMode === "yes") parts.push(`Nap ${fmt(toMin(e.napStart))}–${fmt(toMin(e.napEnd))}`);
+      else if (e.napStart && e.napEnd && e.napMode === "yes" && e.napSet) parts.push(`Nap ${fmt(toMin(e.napStart))}–${fmt(toMin(e.napEnd))}`);
       const pl = plannedLightsOf(e);
       if (typeof e.planned === "number") parts.push(`Planned lights out ${pl !== null ? fmt(pl) : "–"}, asleep ${fmt(e.planned)}`);
       const nx = morningAfter(k), a = eveMin(e.actual), w = nx ? toMin(nx.wake) : null;
@@ -1414,6 +1417,26 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
         });
         act.append(el("span", null, name), inp);
       });
+      if (k !== day) {   // today's nap is edited in Today; past days here
+        const napSel = document.createElement("select"); napSel.setAttribute("aria-label", "Nap, " + dayLabel(k));
+        [["", "Not logged"], ["no", "No nap"], ["yes", "Napped"]].forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; napSel.appendChild(o); });
+        const logged = e.napMode === "no" ? "no" : e.napMode === "yes" && e.napSet ? "yes" : "";
+        napSel.value = logged;
+        const ns = document.createElement("input"), ne = document.createElement("input");
+        [ns, ne].forEach((i, n) => { i.type = "time"; i.setAttribute("aria-label", (n ? "Nap end, " : "Nap start, ") + dayLabel(k)); });
+        ns.value = logged === "yes" ? e.napStart || "" : ""; ne.value = logged === "yes" ? e.napEnd || "" : "";
+        const times = el("div", "nap-times"); times.append(ns, el("span", null, "to"), ne); times.hidden = napSel.value !== "yes";
+        const saveNap = () => {
+          const en = state.log[k];
+          if (napSel.value === "no") { en.napMode = "no"; en.napSet = true; }
+          else if (napSel.value === "yes") { en.napMode = "yes"; en.napSet = true; if (ns.value) en.napStart = ns.value; if (ne.value) en.napEnd = ne.value; }
+          else { en.napMode = "yes"; en.napSet = false; }
+          save(); calc(false);
+        };
+        napSel.addEventListener("change", () => { times.hidden = napSel.value !== "yes"; if (napSel.value !== "yes" || (ns.value && ne.value)) saveNap(); });
+        [ns, ne].forEach((i) => i.addEventListener("change", () => { if (ns.value && ne.value && toMin(ne.value) > toMin(ns.value)) saveNap(); }));
+        act.append(el("span", null, "Nap"), napSel, el("span"), times);
+      }
       const pills = el("div", "pills");
       const lb = lateBy(e), st = settleOf(e), dr = driftOf(e);
       if (e.off) pills.append(el("span", "pill late", "Sick or off night, not counted"));
