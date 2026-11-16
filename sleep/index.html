@@ -496,8 +496,8 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
         <div class="hint">Usual advice is 30–60 minutes earlier. Shorter naps move bedtime in proportion.</div>
       </div>
       <div class="field">
-        <label for="sleepH">Sleep per 24h (hours, nap included)</label>
-        <input type="number" id="sleepH" min="8" max="16" step="0.25">
+        <label for="sleepH">Sleep per 24h (nap included)</label>
+        <select id="sleepH"></select>
         <div class="hint" id="sleepRec"></div>
         <button type="button" class="btn" id="useRec" hidden></button>
       </div>
@@ -704,6 +704,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
 
   // ---------- the model ----------
   function model(e) {
+    if (!e.napMode) e = Object.assign({}, e, { napMode: "yes", napSet: false });   // e.g. a day added from another phone
     const wake = toMin(e.wake);
     if (wake === null) return { error: "Enter a wake-up time." };
     const tW = toMin(S.targetWake) + 1440;
@@ -1045,7 +1046,10 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
   const ageLabel = (m) => { const y = Math.floor(m / 12), mo = m % 12; return `${y} ${y === 1 ? "year" : "years"}${mo ? ` ${mo} ${mo === 1 ? "month" : "months"}` : ""}`; };
   function renderSleepSettings() {
     const total = totalSleep(), m = ageMonths(), r = recSleep(m);
-    if (document.activeElement !== $("sleepH")) $("sleepH").value = +(total / 60).toFixed(2);
+    const sel = $("sleepH");
+    if (!sel.options.length) for (let m = 540; m <= 900; m += 15) { const o = document.createElement("option"); o.value = String(m); o.textContent = dur(m); sel.appendChild(o); }
+    if (![...sel.options].some((o) => o.value === String(total))) { const o = document.createElement("option"); o.value = String(total); o.textContent = dur(total); sel.appendChild(o); }
+    sel.value = String(total);
     const who = m === null ? "a 3-year-old (add her birth month to keep this up to date)" : `${ageLabel(m)}`;
     const where = total < r.lo ? "below" : total > r.hi ? "above" : "within";
     $("sleepRec").textContent = `Recommended for ${who}: about ${dur(r.mid)} (${dur(r.lo)}–${dur(r.hi)} for ${r.band}). Yours is ${dur(total)}, ${where} that range.`;
@@ -1053,7 +1057,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     $("useRec").hidden = Math.abs(diff) < 15;
     $("useRec").textContent = `Use ${dur(r.mid)}: asleep by ${fmt(toMin(S.anchorBed) - diff)}`;
     const late = toMin(S.targetWake) > toMin(S.latestWake || "07:15");
-    $("linkHint").textContent = `Asleep by and wake-up stay ${dur(nightLen())} apart (${stdNap() ? `${dur(total)} minus her ${dur(stdNap())} nap` : `${dur(total)}, no nap`}). Change one and the other follows.` + (late ? ` Wake-up is after your latest daycare wake-up (${fmt(toMin(S.latestWake))}).` : "");
+    $("linkHint").textContent = `With this: asleep by ${fmt(toMin(S.anchorBed))}, wake-up ${fmt(toMin(S.targetWake))} on a normal nap day. Asleep by and wake-up stay ${dur(nightLen())} apart (${stdNap() ? `${dur(total)} minus her ${dur(stdNap())} nap` : `${dur(total)}, no nap`}). Change one and the other follows.` + (late ? ` Wake-up is after your latest daycare wake-up (${fmt(toMin(S.latestWake))}).` : "");
   }
   function setLinked(field, value) {
     const v = toMin(value); if (v === null) return;
@@ -1114,6 +1118,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     document.querySelectorAll("[data-mood]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mood === cur.mood)));
     $("napTimes").hidden = mode === "no";
     $("napEndField").hidden = mode === "now";
+    if (!cur.napMode) cur.napMode = "yes";
     const nw = +cur.nightWakes || 0;
     $("nwCount").textContent = nw === 1 ? "1 time" : `${nw} times`;
     $("nwAwakeField").hidden = !nw;
@@ -2136,7 +2141,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
   });
   ["anchorBed", "targetWake"].forEach((id) => $(id).addEventListener("change", () => { if ($(id).value) setLinked(id, $(id).value); }));
   $("latestWake").addEventListener("input", () => { if ($("latestWake").value) { S.latestWake = $("latestWake").value; save(); renderSleepSettings(); } });
-  $("sleepH").addEventListener("change", () => { const h = parseFloat($("sleepH").value); if (Number.isFinite(h)) setTotal(Math.round(h * 4) * 15); });
+  $("sleepH").addEventListener("change", () => { const m = parseInt($("sleepH").value, 10); if (Number.isFinite(m)) setTotal(m); });
   $("stdNap").addEventListener("change", () => {
     const n = parseInt($("stdNap").value, 10); if (!(n >= 0 && n <= 180)) return;
     const total = totalSleep(); S.stdNap = n; setTotal(total);   // same sleep per day: a shorter nap means an earlier bedtime
