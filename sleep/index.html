@@ -554,7 +554,18 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
       <p><strong>Always running late?</strong> If lights out is 30+ minutes late on 6 of the last 10 nights, the planner checks the mornings after. If she slept in and was mostly happy, it suggests a later day as a 4-night trial: a later wake-up and bedtime, no later than your latest wake-up for daycare days. If she still woke at her usual time, a later schedule would cost her~ sleep, so it suggests ways to make the evening fit instead, including a shorter routine (quiet time and bath no shorter than 15 minutes, books no shorter than 20).</p>
       <p><strong>The routine.</strong> It starts at dinner (screens off), then quiet time to digest, then bath, drying, pyjamas and teeth, books and lights out. The planner works back from the asleep-by time to tell you when to start dinner.</p>
       <p><strong>Catch-up routine.</strong> If you're late, tap "Starting dinner now" or "Starting bath now". Quiet time is cut down to 15 minutes, then dinner to 30, books to 15, the bath to 10, and drying, pyjamas and teeth to 10, keeping the same order, to get lights out as close to the plan as possible. If she's also wired after a good nap, each Wired tap still adds 15 minutes of books.</p>
-      <p>Sources: the American Academy of Sleep Medicine and the US National Sleep Foundation give 10–13h per 24h for ages 3–5, and the NHS gives about 12h at age 3. Awake times, settle times and the early-waking signs are common advice from sleep consultants, not official guidelines. This is a guide only. Your child's own cues come first.</p>
+      <p><strong>What the advice is based on.</strong> This is general guidance, not medical advice, and her own cues come first.</p>
+      <ul>
+        <li><strong>How much sleep</strong> (10–13h a day at 3–5): American Academy of Sleep Medicine consensus (Paruthi et al., 2016). About 12h at age 3: NHS guidance.</li>
+        <li><strong>A consistent nightly routine</strong> (same steps, same order, calm and short): Mindell et al., 2009 and 2015, which found routines lead to falling asleep faster and fewer night wakings.</li>
+        <li><strong>Screens off at least an hour before bed:</strong> American Academy of Pediatrics.</li>
+        <li><strong>Falling asleep without a parent, brief and boring check-ins, and expecting a short "extinction burst"</strong> (nights 2–4 worse): American Academy of Sleep Medicine review of behavioural treatments (Mindell et al., 2006).</li>
+        <li><strong>Bedtime fading</strong> for long settling: Piazza and Fisher, 1991.</li>
+        <li><strong>Tickets for calling out:</strong> the "bedtime pass" (Friman et al., 1999).</li>
+        <li><strong>Scheduled waking</strong> for night terrors and same-time wakings: Durand and Mindell, 1999. Night terrors come in the first part of the night, and you shouldn't wake a child during one.</li>
+        <li><strong>See your GP about snoring</strong> 3 or more nights a week, or about pauses in breathing: American Academy of Pediatrics guideline on sleep apnoea (Marcus et al., 2012).</li>
+        <li><strong>Common sleep-coach practice</strong> (experience-based, not formal research): awake times (about 5–6h 30m after the nap and about 12h 30m in the day at 3), 30–60 minutes earlier with no nap, naps ending by about 3pm, early waking before 6am being a sign of a late bedtime, being "wired" often meaning overtired, settling faster on no-nap days as a sign she's ready to drop the nap, quiet time during the nap transition, okay-to-wake clocks and sticker charts.</li>
+      </ul>
     </details>
   </section>
   </details>
@@ -1281,7 +1292,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
 
     if (p.settle !== null) {
       const sv = round5(p.settle);
-      para(`She takes about ${dur(sv)} to settle after lights out (15–20 min is ideal).`);
+      para(`She takes about ${dur(sv)} to settle after lights out (15–20 minutes is typical; regularly over 30 is long).`);
       if (!state.trial && !(rec && (rec.kind === "fade" || rec.kind === "stall")) && Math.abs(sv - (+S.settle || 0)) >= 10) button(`Plan for ${sv} min settle time (now ${S.settle})`, () => { S.settle = sv; save(); syncInputs(); calc(!!state.log[day]); });
     }
     if (p.mornings >= MIN_N) para(`Woke before 6am on ${p.earlyN} of ${p.mornings} mornings. Woke in the night on ${p.wakeN} of ${p.mornings} nights.`, "muted");
@@ -1498,7 +1509,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
       ni.ws.forEach((w) => { A.detailed.push(w); if (w.cause) A.cause[w.cause] = (A.cause[w.cause] || 0) + 1; if (w.resp) A.resp[w.resp] = (A.resp[w.resp] || 0) + 1; });
       const e = state.log[k];
       if (e && !e.off && lateBy(e) !== null) { const slot = isLate(e) ? A.lateWake : A.ontimeWake; slot[0]++; if (ni.count) slot[1]++; }
-      const nx = morningAfter(k); if (nx && nx.snore) A.snore++;
+      const nx = morningAfter(k); if (nx && nx.snore) { A.snore++; if (k >= shiftKey(day, -7)) A.snore7 = (A.snore7 || 0) + 1; }
     });
     A.avg = A.nights ? A.total / A.nights : 0;
     const times = A.detailed.map((w) => eveMin(w.t)).filter((v) => v !== null);
@@ -1527,18 +1538,19 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
 
   function planSteps(kind, stir) {
     const lightsT = plan ? plan.origLights : null;
-    const stirLine = (days) => stir != null
-      ? `Scheduled waking: at about ${fmt(stir)}, gently stir her~ (until she moves or mumbles), then let her~ drift back. Every night${days ? ` for ${days} nights` : ""}.`
-      : "If they happen at a similar time, gently stir her~ 15–30 minutes before that time each night.";
+    const stirLine = () => (stir != null
+      ? `Scheduled waking: at about ${fmt(stir)} (15–30 minutes before the usual time), gently stir her~ until she moves or mumbles, then let her~ drift back.`
+      : "If they happen at a similar time, gently stir her~ 15–30 minutes before that time.")
+      + " Do it every night until there's been about a week without episodes, then skip a night here and there before stopping.";
     switch (kind) {
       case "settle": return [
-        "At bedtime, say goodnight and leave before she's asleep. If she calls out, check in briefly after 2 minutes, then 5, then 10. Falling asleep without you at bedtime is what lets her~ do it again at 2am.",
+        "At bedtime, say goodnight and leave before she's asleep. If she calls out, check in after 2 minutes, then 5, then 10. Keep each check-in under a minute, calm and boring. Falling asleep without you at bedtime is what lets her~ do it again at 2am.",
         "At night, give the same short response every time (it's on the night screen). No lying down, and no coming into your bed.",
         "A sticker in the morning when she stays in her own bed all night."];
-      case "terror": return [stirLine(7),
+      case "terror": return [stirLine(),
         "During a terror, don't wake her~ or talk to her~. Keep her safe and wait. It passes in a few minutes.",
         "Overtiredness triggers terrors, so keep bedtime on time, or try it a little earlier."];
-      case "habit": return [stirLine(7) + " Then stop.",
+      case "habit": return [stirLine(),
         "If she wakes anyway, give the same short, boring response each time.",
         "A sticker in the morning when she stays in her own bed all night."];
       case "toilet": return [
@@ -1594,7 +1606,8 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     const [ln, lw] = A.lateWake, [on, ow] = A.ontimeWake;
     if (ln >= 2 && on >= 2 && lw / ln - ow / on >= 0.3) para(`She wakes more after late nights (${lw} of ${ln}, against ${ow} of ${on} on time). Overtiredness causes night wakings, so getting bedtime on time is part of the fix.`, "muted");
     if ((A.cause.terror || 0) >= 3) para("Frequent night terrors are worth mentioning to your GP.", "muted");
-    if (A.snore >= 3) para(`Snoring or gasping on ${A.snore} mornings. Regular snoring is worth checking with your GP, as it can be a sign of enlarged tonsils or adenoids.`, "muted");
+    if ((A.snore7 || 0) >= 3) para(`Snoring or gasping on ${A.snore7} of the last 7 nights. Snoring 3 or more nights a week is worth checking with your GP: it can be a sign of enlarged tonsils or adenoids.`, "rec");
+    else if (A.snore) para("Snoring now and then is common, especially with a cold. See your GP if it happens 3 or more nights a week, or straight away if you notice pauses in her breathing or gasping.", "muted");
   }
   function renderNightPlan(body, NP, yesterday) {
     const box = el("div", "trial"); body.appendChild(box);
