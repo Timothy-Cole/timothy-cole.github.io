@@ -534,7 +534,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
         <li><strong>No nap:</strong> earlier by the amount in Settings, 30 minutes to start with (unless she's stopped napping). The usual advice is 30–60 minutes earlier, because toddlers don't make up a missed nap minute for minute.</li>
         <li><strong>Shorter or longer nap:</strong> moves bedtime in proportion. With a 1h 30m usual nap and 30 minutes for no nap, a 1-hour nap is 10 minutes earlier and a 2-hour nap is 10 minutes later.</li>
         <li><strong>Late nap:</strong> she needs about 5 hours awake after a nap, so a late nap pushes bedtime later.</li>
-        <li><strong>Early start or early nap:</strong> to avoid overtiredness, she isn't kept up more than about 6h 30m after her nap, or about 12h 30m in the whole day (at age 3; a bit less at 2 and a bit more from 4). It never plans more than 13 hours of sleep a day in total. So waking at 5:30am, or a nap that ends early, brings bedtime earlier.</li>
+        <li><strong>Early start or early nap:</strong> to avoid overtiredness, she isn't kept up more than about 6h 30m after her nap (at age 3; a bit less at 2 and a bit more from 4), or more than 24 hours minus the sleep you've set, plus 30 minutes, in the whole day (12h 30m with 12h of sleep, 13h 30m with 11h). It never plans more than 13 hours of sleep a day in total. So waking at 5:30am, or a nap that ends early, brings bedtime earlier.</li>
       </ul>
       <p>It stays within 30 minutes of the setting on normal days. On hard days (an early start or an early nap) it can go up to 90 minutes earlier, but never before 6:30pm. Tired and Wired can move one night by up to 45 minutes.</p>
       <p><strong>Wake her~ by</strong> is the earlier of her usual nap length and 5 hours before her usual bedtime.</p>
@@ -1043,10 +1043,12 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
   // Ranges from the American Academy of Sleep Medicine (per 24h, naps included); the middle figure
   // follows NHS-style guidance by year (about 12h at 3, a little less each year after).
   // Sleep-coach limits on time awake: after the nap (upper end of coach ranges: 6h at 2, 6h 30m at 3, 7h from 4)
-  // and across the day (24h minus her recommended sleep, plus 30 min of leeway: 12h 30m at 3).
+  // and across the day: 24h minus the sleep you've set for her, plus 30 min of leeway (12h 30m with 12h of
+  // sleep, 13h 30m with 11h), kept between 11h 30m and 13h 30m.
   function awakeLimits() {
     const m = ageMonths(), r = recSleep(m), age = m === null ? 36 : m;
-    return { afterNap: age < 36 ? 360 : age < 48 ? 390 : 420, day: 1440 - r.mid + 30, maxSleep: r.hi };
+    const day = Math.min(810, Math.max(690, 1440 - totalSleep() + 30));
+    return { afterNap: age < 36 ? 360 : age < 48 ? 390 : 420, day, maxSleep: r.hi };
   }
   function recSleep(months) {
     const m = months === null ? 36 : months;
@@ -1058,14 +1060,15 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
   }
   const ageLabel = (m) => { const y = Math.floor(m / 12), mo = m % 12; return `${y} ${y === 1 ? "year" : "years"}${mo ? ` ${mo} ${mo === 1 ? "month" : "months"}` : ""}`; };
   function renderSleepSettings() {
-    const total = totalSleep(), m = ageMonths(), r = recSleep(m);
+    const total = totalSleep(), m = ageMonths(), r = Object.assign({}, recSleep(m));
+    if (!stdNap()) r.mid = Math.max(r.lo, r.mid - 30);   // no nap: about 30 min less in total is typical
     const sel = $("sleepH");
     if (!sel.options.length) for (let m = 540; m <= 900; m += 15) { const o = document.createElement("option"); o.value = String(m); o.textContent = dur(m); sel.appendChild(o); }
     if (![...sel.options].some((o) => o.value === String(total))) { const o = document.createElement("option"); o.value = String(total); o.textContent = dur(total); sel.appendChild(o); }
     sel.value = String(total);
     const who = m === null ? "a 3-year-old (add her birth month to keep this up to date)" : `${ageLabel(m)}`;
     const where = total < r.lo ? "below" : total > r.hi ? "above" : "within";
-    $("sleepRec").textContent = `Recommended for ${who}: about ${dur(r.mid)} (${dur(r.lo)}–${dur(r.hi)} for ${r.band}). Yours is ${dur(total)}, ${where} that range.`;
+    $("sleepRec").textContent = `Recommended for ${who}${stdNap() ? "" : " who no longer naps"}: about ${dur(r.mid)} (${dur(r.lo)}–${dur(r.hi)} for ${r.band}). Yours is ${dur(total)}, ${where} that range.`;
     const diff = r.mid - total;
     $("useRec").hidden = Math.abs(diff) < 15;
     $("useRec").textContent = `Use ${dur(r.mid)}: asleep by ${fmt(toMin(S.anchorBed) - diff)}`;
@@ -2164,7 +2167,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
   });
   $("noNap").addEventListener("change", () => { S.noNapEarlier = parseInt($("noNap").value, 10); save(); calc(!!state.log[day]); });
   $("birthMonth").addEventListener("change", () => { S.birthMonth = /^\d{4}-\d{2}$/.test($("birthMonth").value) ? $("birthMonth").value : ""; save(); renderSleepSettings(); });
-  $("useRec").addEventListener("click", () => setTotal(recSleep(ageMonths()).mid));
+  $("useRec").addEventListener("click", () => { const r = recSleep(ageMonths()); setTotal(stdNap() ? r.mid : Math.max(r.lo, r.mid - 30)); });
   ["dinner", "digest", "bath", "dress", "books", "settle"].forEach((id) => $(id).addEventListener("input", () => { const n = parseInt($(id).value, 10); if (Number.isFinite(n) && n >= 0) { S[id] = n; save(); calc(!!state.log[day]); } }));
   $("nwMinus").addEventListener("click", () => { cur.nightWakes = Math.max(0, (+cur.nightWakes || 0) - 1); if (!cur.nightWakes) cur.nightAwake = 0; calc(true); });
   $("nwPlus").addEventListener("click", () => { cur.nightWakes = Math.min(10, (+cur.nightWakes || 0) + 1); calc(true); });
