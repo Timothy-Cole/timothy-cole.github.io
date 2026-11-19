@@ -245,6 +245,36 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
 .log .act select { font-size: 15px; padding: 6px 8px; }
 .nap-times { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; align-items: center; }
 .nap-times input { font-size: 15px; padding: 6px 8px; }
+.simple-card { display: none; }
+body.simple .simple-card { display: block; }
+body.simple #nowCard, body.simple #planCard, body.simple #moreFold { display: none; }
+body.simple { font-size: 19px; }
+.s-step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+.s-step.current { border: 2px solid var(--accent); }
+.s-step.done:not(.current) { opacity: .85; }
+.s-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.s-head h2 { font-size: 22px; margin: 0; }
+.s-num { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--surface-2); color: var(--text); flex-shrink: 0; }
+.s-step.done .s-num { background: var(--good); color: var(--surface); }
+.s-step.current .s-num { background: var(--accent); color: var(--surface); }
+.s-val { font-size: 22px; font-weight: 700; margin: 4px 0 6px; }
+.s-note { color: var(--muted); margin: 0 0 12px; }
+.s-msg { color: var(--warn); font-weight: 600; margin: 6px 0; min-height: 0; }
+.s-msg:empty { display: none; }
+.s-step .btn.lg { margin-top: 8px; font-size: 19px; padding: 16px; }
+.s-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.s-times { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
+.s-time span { display: block; font-weight: 600; margin-bottom: 6px; }
+.s-time input { font-size: 20px; min-height: 52px; }
+.s-link { font-size: 17px; display: inline-block; margin-top: 10px; }
+.s-big { display: grid; grid-template-columns: auto auto; justify-content: space-between; align-items: baseline; gap: 2px 12px; margin: 6px 0 10px; }
+.s-big div { color: var(--muted); }
+.s-big strong { font-size: 32px; text-align: right; color: var(--sleep); }
+.s-big strong.lo { color: var(--lights-ink); }
+.s-routine { list-style: none; margin: 0 0 6px; padding: 0; color: var(--muted); }
+.s-routine li { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--border); }
+.s-send { border: 2px solid var(--good); }
+.s-full { text-align: center; margin: 8px 0 24px; }
 [hidden] { display: none !important; }
 @media (max-width: 380px) { .hero .big { font-size: 32px; } .row3 { grid-template-columns: 1fr 1fr; } .seg button { font-size: 14px; } }
 </style>
@@ -252,6 +282,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
 <body>
 <div class="wrap">
   <h1 id="pageTitle">Bedtime planner</h1>
+  <div id="simpleCard" class="simple-card" aria-live="polite"></div>
 
   <section class="card hero" id="nowCard" aria-live="polite">
     <div class="pair">
@@ -475,6 +506,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
   <section class="card">
     <details>
       <summary>Settings</summary>
+      <label class="switch" style="margin:4px 0 14px"><input type="checkbox" id="simpleToggle"> Simple mode: just woke up, nap and bedtime (for grandparents and carers)</label>
       <h3 class="set-h">Your child</h3>
       <div class="field"><label for="childName">Name (optional)</label><input type="text" id="childName" maxlength="30" autocomplete="off" placeholder="e.g. Mia"></div>
       <div class="field">
@@ -1238,7 +1270,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     renderSide(p);
   }
 
-  function tick() { tickInner(); renderNow(); renderDay(); }
+  function tick() { tickInner(); renderNow(); renderDay(); renderSimple(); }
   function tickInner() {
     const cd = $("countdown");
     if (!plan || activeDay() !== day) { cd.hidden = true; $("lateWrap").hidden = true; return; }
@@ -1273,6 +1305,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     renderNightCard();
     renderNightBar();
     renderDay();
+    if (typeof renderSimple === "function") renderSimple();
     morningNightHint();
     renderChart();
     renderLog();
@@ -2055,7 +2088,7 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     if (typeof e.stall === "boolean") o.stall = e.stall;
     if (typeof e.off === "boolean") o.off = e.off;
     if (typeof e.snore === "boolean") o.snore = e.snore;
-    ["wakeSet", "napSet", "moodSkipped"].forEach((f) => { if (typeof e[f] === "boolean") o[f] = e[f]; });
+    ["wakeSet", "napSet", "moodSkipped", "wakeSkipped"].forEach((f) => { if (typeof e[f] === "boolean") o[f] = e[f]; });
     if (typeof e.wiredOT === "string") o.wiredOT = e.wiredOT.slice(0, 120);
     return o;
   }
@@ -2252,8 +2285,110 @@ details.more > summary > span:first-child { font-weight: 700; font-size: 18px; }
     $("suSkip").addEventListener("click", () => { state.setupDone = true; save(); su.hidden = true; document.body.style.overflow = ""; });
   }
 
+  // ---------- Simple mode: three steps for a grandparent (woke up, nap, bedtime) ----------
+  // On by default for phones set up from a link; anyone can switch it in Settings.
+  const simpleOn = () => (S.simple === undefined ? !!state.helper : !!S.simple);
+  const simpleEdit = { wake: false, nap: false };
+  function applySimple() {
+    const on = simpleOn();
+    document.body.classList.toggle("simple", on);
+    $("simpleToggle").checked = on;
+    if (on) renderSimple();
+  }
+  function renderSimple() {
+    if (!simpleOn()) return;
+    const box = $("simpleCard");
+    if (box.contains(document.activeElement) && document.activeElement.tagName === "INPUT") return;   // don't wipe a time being typed
+    box.innerHTML = "";
+    const step = (n, title, done, current) => {
+      const s = el("section", "s-step" + (done ? " done" : "") + (current ? " current" : ""));
+      const h = el("div", "s-head"); h.append(el("span", "s-num", done ? "✓" : String(n)), el("h2", null, title)); s.appendChild(h);
+      box.appendChild(s); return s;
+    };
+    const big = (parent, label, fn, primary = true) => { const b = el("button", "btn lg" + (primary ? " primary" : ""), label); b.type = "button"; b.onclick = fn; parent.appendChild(b); return b; };
+    const link = (parent, label, fn) => { const b = el("button", "linkbtn s-link", label); b.type = "button"; b.onclick = fn; parent.appendChild(b); return b; };
+    const timeRow = (parent, labels, values, onSave) => {
+      const row = el("div", "s-times"), inputs = [];
+      labels.forEach((l, i) => { const f = el("label", "s-time"); f.append(el("span", null, l)); const inp = document.createElement("input"); inp.type = "time"; inp.value = values[i] || ""; f.appendChild(inp); inputs.push(inp); row.appendChild(f); });
+      parent.appendChild(row);
+      const msg = el("p", "s-msg"); parent.appendChild(msg);
+      big(parent, "Save", () => { const err = onSave(inputs.map((i) => i.value)); msg.textContent = err || ""; });
+    };
+    const h = new Date().getHours(), morning = h >= 4 && h < 12 && activeDay() === day;
+    const wakeDone = !!cur.wakeSet, napDone = !!cur.napSet || cur.napMode === "no";
+    const napping = cur.napMode === "now";
+    const asleep = !!cur.actual, lightsDone = !!cur.lightsOut;
+
+    // 1. Woke up
+    const s1 = step(1, "Woke up", wakeDone || cur.wakeSkipped, morning && !wakeDone && !cur.wakeSkipped);
+    if (wakeDone && !simpleEdit.wake) {
+      s1.appendChild(el("p", "s-val", `Woke at ${fmt(toMin(cur.wake))}`));
+      link(s1, "Change", () => { simpleEdit.wake = true; renderSimple(); });
+    } else if (cur.wakeSkipped && !simpleEdit.wake) {
+      s1.appendChild(el("p", "s-note", "Not with you this morning."));
+      link(s1, "Add it", () => { simpleEdit.wake = true; renderSimple(); });
+    } else {
+      s1.appendChild(el("p", "s-note", "What time did she wake up this morning?"));
+      if (!simpleEdit.wake && morning) big(s1, "She woke up now", () => { cur.wake = nowHHMM(); cur.wakeSet = true; cur.wakeSkipped = false; calc(true); });
+      timeRow(s1, [morning && !simpleEdit.wake ? "Or pick the time" : "Pick the time"], [wakeDone ? cur.wake : ""], ([v]) => {
+        if (!v) return "Pick a time first.";
+        cur.wake = v; cur.wakeSet = true; cur.wakeSkipped = false; simpleEdit.wake = false; $("wake").value = v; calc(true);
+      });
+      if (!wakeDone) link(s1, "She wasn't with me this morning", () => { cur.wakeSkipped = true; simpleEdit.wake = false; calc(true); });
+    }
+
+    // 2. Nap
+    const s2 = step(2, "Nap", napDone && !napping, !morning && !napDone || napping);
+    if (napping) {
+      s2.appendChild(el("p", "s-val", `Napping since ${fmt(toMin(cur.napStart))}`));
+      if (!$("wakeBy").hidden) s2.appendChild(el("p", "s-note", `Wake her by ${$("wakeByTime").textContent}.`));
+      big(s2, "She's woken up", () => { cur.napMode = "yes"; cur.napSet = true; cur.napEnd = nowHHMM(); $("napEnd").value = cur.napEnd; calc(true); });
+    } else if (napDone && !simpleEdit.nap) {
+      s2.appendChild(el("p", "s-val", cur.napMode === "no" ? "No nap today" : `Napped ${fmt(toMin(cur.napStart))} to ${fmt(toMin(cur.napEnd))}`));
+      link(s2, "Change", () => { simpleEdit.nap = true; renderSimple(); });
+    } else {
+      s2.appendChild(el("p", "s-note", "From childcare, or if she naps with you. Bedtime is worked out from it."));
+      timeRow(s2, ["Nap started", "Nap ended"], [napDone && cur.napMode === "yes" ? cur.napStart : "", napDone && cur.napMode === "yes" ? cur.napEnd : ""], ([a, z]) => {
+        if (!a || !z) return "Fill in both times.";
+        if (toMin(z) <= toMin(a)) return "The wake-up time needs to be after she fell asleep.";
+        Object.assign(cur, { napMode: "yes", napSet: true, napStart: a, napEnd: z }); simpleEdit.nap = false;
+        $("napStart").value = a; $("napEnd").value = z; calc(true);
+      });
+      const row = el("div", "s-row"); s2.appendChild(row);
+      big(row, "Napping now", () => { Object.assign(cur, { napMode: "now", napSet: true, napStart: nowHHMM() }); simpleEdit.nap = false; $("napStart").value = cur.napStart; calc(true); }, false);
+      big(row, "No nap today", () => { Object.assign(cur, { napMode: "no", napSet: true }); simpleEdit.nap = false; calc(true); }, false);
+    }
+
+    // 3. Bedtime
+    const s3 = step(3, "Bedtime", asleep, !morning && (napDone || asleep || lightsDone) && !napping);
+    if (!plan) { s3.appendChild(el("p", "s-msg", $("error").textContent || "Fill in the steps above.")); }
+    else {
+      const t = el("div", "s-big");
+      t.append(el("div", null, "Lights out"), el("strong", "lo", fmt(plan.lights)), el("div", null, "Asleep by"), el("strong", null, fmt(plan.asleep)));
+      s3.appendChild(t);
+      if (!napDone && !napping) s3.appendChild(el("p", "s-note", "This will update when you add the nap."));
+      const r = el("ul", "s-routine");
+      [["Dinner", plan.dinnerStart], ["Bath", plan.bathStart], ["Dry, pyjamas & teeth", plan.dressStart], ["Books", plan.booksStart]].forEach(([l, v]) => { const li = el("li"); li.append(el("span", null, l), el("span", null, fmt(v))); r.appendChild(li); });
+      s3.appendChild(r);
+      if (!lightsDone && !asleep) big(s3, "Lights out now", () => { cur.lightsOut = nowHHMM(); $("lightsOut").value = cur.lightsOut; calc(true); });
+      else if (!asleep) { s3.appendChild(el("p", "s-val", `Lights out at ${fmt(eveMin(cur.lightsOut))}`)); big(s3, "She's asleep now", () => { cur.actual = nowHHMM(); $("actual").value = cur.actual; calc(true); }); }
+      else s3.appendChild(el("p", "s-val", `Lights out ${lightsDone ? fmt(eveMin(cur.lightsOut)) : "–"}, asleep ${fmt(eveMin(cur.actual))}. Goodnight!`));
+      if (asleep || lightsDone) link(s3, "She's awake in the night", openNight);
+    }
+
+    // Send the times back once there's something new (after the morning wake-up, or after bedtime)
+    if (state.helper && (wakeDone || asleep)) {
+      const s = el("section", "s-step s-send"); box.appendChild(s);
+      s.appendChild(el("p", "s-note", wakeDone && morning ? "All done for last night. Send the times so they're in the parents' log:" : "Send the times so they're in the parents' log:"));
+      big(s, `Send times to ${nameNow() ? nameNow() + "'s" : "the"} parents`, () => sendLink("nights"));
+    }
+    const full = el("p", "s-full"); link(full, "Full version", () => { S.simple = false; save(); applySimple(); window.scrollTo(0, 0); }); box.appendChild(full);
+  }
+  $("simpleToggle").addEventListener("change", () => { S.simple = $("simpleToggle").checked; save(); applySimple(); });
+
   syncInputs();
   calc(false);
+  applySimple();
   if (/#share=/.test(location.hash)) receive(location.href);
   window.addEventListener("hashchange", () => { if (/#share=/.test(location.hash)) receive(location.href); });
   backupLine();
