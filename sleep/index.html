@@ -419,6 +419,8 @@ body.simple { font-size: 19px; }
             <div class="tin"><input type="time" id="lightsOut"><button type="button" class="btn" data-now="lightsOut">Now</button></div>
           </div>
           <div class="chips"><button type="button" class="chip" id="stallChip" aria-pressed="false">Stalling or calling out</button></div>
+          <span class="flabel" id="whoLabel">Who's doing bedtime?</span>
+          <div class="chips" id="whoChips" role="group" aria-labelledby="whoLabel"></div>
         </div>
       </li>
       <li class="step" id="stepAsleep" style="--c:var(--c-asleep)">
@@ -517,6 +519,8 @@ body.simple { font-size: 19px; }
           <button type="button" data-pr="they">They / their</button>
         </div>
       </div>
+      <div class="field"><label for="bedPeople">Who does bedtime</label><input type="text" id="bedPeople" maxlength="60" autocomplete="off" placeholder="e.g. Mum, Dad">
+        <div class="hint">Separate names with commas. You tap who did bedtime under Lights out, and Her patterns compares how she settles with each of you.</div></div>
       <h3 class="set-h">Her sleep</h3>
       <div class="row">
         <div class="field"><label for="birthMonth">Birth month</label><input type="month" id="birthMonth"></div>
@@ -1172,6 +1176,7 @@ body.simple { font-size: 19px; }
     $("nwCount").textContent = nw === 1 ? "1 time" : `${nw} times`;
     $("nwAwakeField").hidden = !nw;
     $("stallChip").setAttribute("aria-pressed", String(!!cur.stall));
+    renderWho();
     $("offChip").setAttribute("aria-pressed", String(!!cur.off));
     const w = toMin(cur.wake);
     $("wakeHint").textContent = w !== null && earlyWake(w) ? "Before 6am: last night's bedtime may have been too late." : "";
@@ -1367,8 +1372,39 @@ body.simple { font-size: 19px; }
     else setBadge("patBadge", (rec && rec.delta !== undefined) || lateShown ? "Suggestion" : "", true);
     { const r = recSleep(ageMonths()), t = totalSleep();
       if (t < r.lo || t > r.hi) para(`Her plan gives ${dur(t)} of sleep a day, ${t < r.lo ? "below" : "above"} the usual ${dur(r.lo)}–${dur(r.hi)} for her age. You can change it in Settings.`, "muted"); }
+    renderWhoPattern(para);
     if (p.lateN) para(`${p.lateN} late ${p.lateN === 1 ? "night" : "nights"} not used to judge bedtime (settle times still count).`, "muted");
     if (p.offN) para(`${p.offN} sick or off ${p.offN === 1 ? "night" : "nights"} left out.`, "muted");
+  }
+
+  // ---------- who did bedtime ----------
+  function bedPeople() { return [...new Set(String(S.bedPeople === undefined ? "Mum, Dad" : S.bedPeople).split(",").map((x) => x.trim().slice(0, 20)).filter(Boolean))].slice(0, 4); }
+  function renderWho() {
+    const box = $("whoChips"), names = bedPeople();
+    box.innerHTML = ""; box.hidden = $("whoLabel").hidden = !names.length;
+    names.forEach((n) => {
+      const b = el("button", "chip", n); b.type = "button"; b.setAttribute("aria-pressed", String(cur.who === n));
+      b.onclick = () => { cur.who = cur.who === n ? "" : n; calc(true); };
+      box.appendChild(b);
+    });
+  }
+  // Compare settle time and asleep time by who did bedtime, over the last 3 weeks.
+  function renderWhoPattern(para) {
+    const from = shiftKey(day, -21), by = {};
+    Object.keys(state.log).filter((k) => k >= from).forEach((k) => {
+      const e = state.log[k]; if (!e || !e.who || e.off) return;
+      const st = settleOf(e); if (st === null) return;
+      (by[e.who] = by[e.who] || { st: [], as: [] }).st.push(st);
+      const a = eveMin(e.actual); if (a !== null) by[e.who].as.push(a);
+    });
+    const ready = Object.keys(by).filter((n) => by[n].st.length >= 3).map((n) => ({ n, st: median(by[n].st), as: median(by[n].as), c: by[n].st.length })).sort((a, b) => a.st - b.st);
+    if (ready.length < 2) {
+      if (bedPeople().length >= 2) para(`To compare bedtimes, tap who's doing bedtime under Lights out. ${Object.keys(by).length ? "Needs 3 nights each." : ""}`.trim(), "muted");
+      return;
+    }
+    para("By who did bedtime (last 3 weeks): " + ready.map((r) => `${r.n} ${dur(round5(r.st))} to settle, asleep ${fmt(round5(r.as))} (${r.c} nights)`).join("; ") + ".");
+    const a = ready[0], z = ready[ready.length - 1], gap = round5(z.st - a.st);
+    if (gap >= 20) para(`She settles about ${dur(gap)} faster with ${a.n}. That's common: children often test one parent more. Compare what each of you does after lights out (how much you talk, where you sit, how you answer stalling) and use the same steps.`, "rec");
   }
 
   // ---------- chart: lights out → asleep per night, planned asleep as a dash ----------
@@ -1462,6 +1498,7 @@ body.simple { font-size: 19px; }
       const nx = morningAfter(k), a = eveMin(e.actual), w = nx ? toMin(nx.wake) : null;
       const ni = nightInfo(k);
       if (a !== null && w !== null) parts.push("Night " + dur(w + 1440 - a - ni.awake));
+      if (e.who) parts.push("Bedtime: " + e.who);
       const act = el("div", "act");
       [["lightsOut", "Lights out"], ["actual", "Asleep"]].forEach(([field, name]) => {
         const inp = document.createElement("input"); inp.type = "time"; inp.value = e[field] || ""; inp.setAttribute("aria-label", name + ", " + dayLabel(k));
@@ -1472,6 +1509,15 @@ body.simple { font-size: 19px; }
         });
         act.append(el("span", null, name), inp);
       });
+      if (k !== day && bedPeople().length) {   // fill in who did bedtime on a past night
+        const ws = document.createElement("select"); ws.setAttribute("aria-label", "Who did bedtime, " + dayLabel(k));
+        const opts = [["", "Not logged"], ...bedPeople().map((n) => [n, n])];
+        if (e.who && !bedPeople().includes(e.who)) opts.push([e.who, e.who]);
+        opts.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; ws.appendChild(o); });
+        ws.value = e.who || "";
+        ws.addEventListener("change", () => { if (ws.value) state.log[k].who = ws.value; else delete state.log[k].who; save(); calc(false); });
+        act.append(el("span", null, "Bedtime"), ws);
+      }
       if (k !== day) {   // today's nap is edited in Today; past days here
         const napSel = document.createElement("select"); napSel.setAttribute("aria-label", "Nap, " + dayLabel(k));
         [["", "Not logged"], ["no", "No nap"], ["yes", "Napped"]].forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; napSel.appendChild(o); });
@@ -1826,6 +1872,7 @@ body.simple { font-size: 19px; }
       text.textContent = `Lights out at ${fmt(eveMin(cur.lightsOut))}.` + stirHint;
       big("She's asleep now", () => { cur.actual = nowHHMM(); $("actual").value = cur.actual; calc(true); });
       small(cur.stall ? "Stalling or calling out ✓" : "She's stalling or calling out", () => { cur.stall = !cur.stall; calc(true); });
+      if (!cur.who) bedPeople().forEach((n) => small(`${n}'s doing bedtime`, () => { cur.who = n; calc(true); }));
       if (n >= plan.asleep + 60) small("She's awake in the night", openNight);
       return;
     }
@@ -1851,8 +1898,9 @@ body.simple { font-size: 19px; }
     if (cur.lightsOut && !e.lightsOut) e.lightsOut = cur.lightsOut;
     if (cur.actual && !e.actual) e.actual = cur.actual;
     if (cur.stall) e.stall = true;
+    if (cur.who && !e.who) e.who = cur.who;
     e.savedAt = nowHHMM();
-    cur.lightsOut = ""; cur.actual = ""; cur.stall = false; syncInputs(); calc(true);
+    cur.lightsOut = ""; cur.actual = ""; cur.stall = false; cur.who = ""; syncInputs(); calc(true);
   });
   [["lnLights", "lightsOut"], ["lnAsleep", "actual"]].forEach(([id, field]) => $(id).addEventListener("change", () => {
     const y = lastNightKey(), e = state.log[y] = Object.assign({}, state.log[y] || {});
@@ -1943,7 +1991,7 @@ body.simple { font-size: 19px; }
     set("stepDress", phase(plan.dressStart, plan.booksStart));
     set("stepBooks", cur.lightsOut ? "past" : phase(plan.booksStart, plan.lights));
     const lo = eveMin(cur.lightsOut), as = eveMin(cur.actual);
-    if (lo !== null) set("stepLights", "done", fmt(lo), `Plan ${fmt(plan.lights)}` + (cur.stall ? " · stalling" : ""));
+    if (lo !== null) set("stepLights", "done", fmt(lo), `Plan ${fmt(plan.lights)}` + (cur.who ? ` · ${cur.who}` : "") + (cur.stall ? " · stalling" : ""));
     else set("stepLights", isToday && n >= plan.lights ? "now" : "plan", fmt(plan.lights), `${+S.settle || 0} min to settle`);
     if (as !== null) set("stepAsleep", "done", fmt(as), (lo !== null && as >= lo ? `Settled in ${dur(as - lo)} · ` : "") + `plan ${fmt(plan.asleep)}` + (cur.off ? " · off night" : ""));
     else set("stepAsleep", lo !== null ? "now" : "plan", fmt(plan.asleep), lo !== null ? "Settling" : "");
@@ -2051,7 +2099,7 @@ body.simple { font-size: 19px; }
       const before = JSON.stringify(mine);
       if (inc.wakeSet && inc.wake) { mine.wake = inc.wake; mine.wakeSet = true; }
       if (inc.napSet || inc.napMode === "no") ["napMode", "napStart", "napEnd", "napSet"].forEach((f) => { if (inc[f] !== undefined) mine[f] = inc[f]; });
-      ["mood", "lightsOut", "actual", "startedAt"].forEach((f) => { if (inc[f]) mine[f] = inc[f]; });
+      ["mood", "lightsOut", "actual", "startedAt", "who"].forEach((f) => { if (inc[f]) mine[f] = inc[f]; });
       ["stall", "off", "snore"].forEach((f) => { if (inc[f]) mine[f] = true; });
       ["nightWakes", "nightAwake"].forEach((f) => { if (+inc[f] > 0) mine[f] = inc[f]; });
       if (inc.lightsOut || inc.actual) ["base", "planned", "plannedLights", "nudge"].forEach((f) => { if (typeof inc[f] === "number") mine[f] = inc[f]; });
@@ -2090,6 +2138,7 @@ body.simple { font-size: 19px; }
     if (typeof e.snore === "boolean") o.snore = e.snore;
     ["wakeSet", "napSet", "moodSkipped", "wakeSkipped"].forEach((f) => { if (typeof e[f] === "boolean") o[f] = e[f]; });
     if (typeof e.wiredOT === "string") o.wiredOT = e.wiredOT.slice(0, 120);
+    if (typeof e.who === "string") o.who = e.who.trim().slice(0, 20);
     return o;
   }
   function backupLine() {
@@ -2118,6 +2167,7 @@ body.simple { font-size: 19px; }
     const d = data.settings || {};
     ["targetWake", "anchorBed", "latestWake"].forEach((f) => { if (typeof d[f] === "string" && HHMM.test(d[f])) S[f] = d[f]; });
     if (typeof d.childName === "string") S.childName = d.childName.slice(0, 30);
+    if (typeof d.bedPeople === "string") S.bedPeople = d.bedPeople.slice(0, 60);
     if (["she", "he", "they"].includes(d.pronoun)) S.pronoun = d.pronoun;
     if (typeof d.birthMonth === "string" && /^\d{4}-\d{2}$/.test(d.birthMonth)) S.birthMonth = d.birthMonth;
     if ([15, 30, 45, 60, 90].includes(d.noNapEarlier)) S.noNapEarlier = d.noNapEarlier;
@@ -2257,6 +2307,8 @@ body.simple { font-size: 19px; }
     b.setAttribute("aria-pressed", String((S.pronoun || "she") === b.dataset.pr));
     b.addEventListener("click", () => { S.pronoun = b.dataset.pr; save(); location.reload(); });
   });
+  $("bedPeople").value = bedPeople().join(", ");
+  $("bedPeople").addEventListener("change", () => { S.bedPeople = $("bedPeople").value.slice(0, 60); save(); $("bedPeople").value = bedPeople().join(", "); calc(false); });
   $("childName").addEventListener("change", () => { S.childName = $("childName").value.trim().slice(0, 30); save(); location.reload(); });
 
   // ---------- first-time setup for new families ----------
